@@ -1,0 +1,18 @@
+{
+  "appTitle": "Workout Minds",
+  "errorPrefix": "Error: {message}",
+  "@errorPrefix": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGenerate": "AI Generate",
+  "aiGeneratorTitle": "What are we hitting today?",
+  "aiGeneratorHint": "e.g. Heavy Chest Day",
+  "aiGeneratorHelperText": "Gemini will build a custom plan based on this.",
+  "cancel": "Cancel",
+  "generate": "Generate",
+  "heavyChestDay": "Heavy Chest Day"
+}

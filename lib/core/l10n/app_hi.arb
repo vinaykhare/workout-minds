@@ -1,0 +1,11 @@
+{
+  "appTitle": "Workout Minds",
+  "errorPrefix": "Arre error ho gaya: {message}",
+  "aiGenerate": "AI se banao",
+  "aiGeneratorTitle": "Aaj kya Exercise karna hai?",
+  "aiGeneratorHint": "Jaise: Heavy Chest Day",
+  "aiGeneratorHelperText" : "Gemini is hisaab se Ek Custom Plan banayega.",
+  "cancel": "Rehne do",
+  "generate": "Banao",
+  "heavyChestDay": "Zabardast Chest Day"
+}
