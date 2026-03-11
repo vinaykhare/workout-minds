@@ -32,7 +32,6 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
-/lib/core/constants.dart
 
 # Symbolication related
 app.*.symbols
@@ -45,3 +44,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /windows
+lib/core/constants.dart
