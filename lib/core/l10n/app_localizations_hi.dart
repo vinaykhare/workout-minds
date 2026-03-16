@@ -37,4 +37,42 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get heavyChestDay => 'Zabardast Chest Day';
+
+  @override
+  String get workoutStarted =>
+      'Workout shuru ho gaya hai. Chalo shuru karte hain!';
+
+  @override
+  String get workoutPaused => 'Workout ruk gaya hai.';
+
+  @override
+  String get workoutStopped => 'Workout khatam. Aaj badhiya kaam kiya!';
+
+  @override
+  String get workoutComplete => 'Workout poora hua. Shabaash!';
+
+  @override
+  String nextUp(Object name, Object reps, Object set, Object total) {
+    return 'Ab agli exercise: $name. Set $set of $total. Target hai $reps reps.';
+  }
+
+  @override
+  String get setCompleteRest => 'Set poora hua. Ab 60 seconds rest karo.';
+
+  @override
+  String restOver(Object set) {
+    return 'Rest khatam. Set $set ke liye taiyaar ho jao.';
+  }
+
+  @override
+  String get finishSet => 'SET POORA HUA';
+
+  @override
+  String get endWorkout => 'Workout band karo';
+
+  @override
+  String get restTime => 'Aaraam ka samay';
+
+  @override
+  String get getReady => 'Taiyaar ho jao...';
 }

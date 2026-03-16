@@ -7,5 +7,16 @@
   "aiGeneratorHelperText" : "Gemini is hisaab se Ek Custom Plan banayega.",
   "cancel": "Rehne do",
   "generate": "Banao",
-  "heavyChestDay": "Zabardast Chest Day"
+  "heavyChestDay": "Zabardast Chest Day",
+  "workoutStarted": "Workout shuru ho gaya hai. Chalo shuru karte hain!",
+  "workoutPaused": "Workout ruk gaya hai.",
+  "workoutStopped": "Workout khatam. Aaj badhiya kaam kiya!",
+  "workoutComplete": "Workout poora hua. Shabaash!",
+  "nextUp": "Ab agli exercise: {name}. Set {set} of {total}. Target hai {reps} reps.",
+  "setCompleteRest": "Set poora hua. Ab 60 seconds rest karo.",
+  "restOver": "Rest khatam. Set {set} ke liye taiyaar ho jao.",
+  "finishSet": "SET POORA HUA",
+  "endWorkout": "Workout band karo",
+  "restTime": "Aaraam ka samay",
+  "getReady": "Taiyaar ho jao..."
 }

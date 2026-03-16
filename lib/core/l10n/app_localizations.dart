@@ -151,6 +151,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Heavy Chest Day'**
   String get heavyChestDay;
+
+  /// No description provided for @workoutStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout started. Let\'s crush it!'**
+  String get workoutStarted;
+
+  /// No description provided for @workoutPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout paused.'**
+  String get workoutPaused;
+
+  /// No description provided for @workoutStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout stopped. Great job today!'**
+  String get workoutStopped;
+
+  /// No description provided for @workoutComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout complete. Fantastic job today!'**
+  String get workoutComplete;
+
+  /// No description provided for @nextUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Next up: {name}. Set {set} of {total}. Target is {reps} reps.'**
+  String nextUp(Object name, Object reps, Object set, Object total);
+
+  /// No description provided for @setCompleteRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Set complete. Rest for 60 seconds.'**
+  String get setCompleteRest;
+
+  /// No description provided for @restOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest is over. Get ready for set {set}.'**
+  String restOver(Object set);
+
+  /// No description provided for @finishSet.
+  ///
+  /// In en, this message translates to:
+  /// **'FINISH SET'**
+  String get finishSet;
+
+  /// No description provided for @endWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'End Workout Early'**
+  String get endWorkout;
+
+  /// No description provided for @restTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest Time'**
+  String get restTime;
+
+  /// No description provided for @getReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Ready...'**
+  String get getReady;
 }
 
 class _AppLocalizationsDelegate

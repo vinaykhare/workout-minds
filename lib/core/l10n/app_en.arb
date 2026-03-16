@@ -14,5 +14,16 @@
   "aiGeneratorHelperText": "Gemini will build a custom plan based on this.",
   "cancel": "Cancel",
   "generate": "Generate",
-  "heavyChestDay": "Heavy Chest Day"
+  "heavyChestDay": "Heavy Chest Day",
+  "workoutStarted": "Workout started. Let's crush it!",
+  "workoutPaused": "Workout paused.",
+  "workoutStopped": "Workout stopped. Great job today!",
+  "workoutComplete": "Workout complete. Fantastic job today!",
+  "nextUp": "Next up: {name}. Set {set} of {total}. Target is {reps} reps.",
+  "setCompleteRest": "Set complete. Rest for 60 seconds.",
+  "restOver": "Rest is over. Get ready for set {set}.",
+  "finishSet": "FINISH SET",
+  "endWorkout": "End Workout Early",
+  "restTime": "Rest Time",
+  "getReady": "Get Ready..."
 }

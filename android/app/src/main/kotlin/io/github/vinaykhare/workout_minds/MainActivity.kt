@@ -1,5 +1,8 @@
 package io.github.vinaykhare.workout_minds
 
-import io.flutter.embedding.android.FlutterActivity
+// 1. Remove the old io.flutter.embedding.android.FlutterActivity import
+// 2. Add the audio_service import:
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+// 3. Change FlutterActivity to AudioServiceActivity
+class MainActivity : AudioServiceActivity()

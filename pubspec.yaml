@@ -30,6 +30,7 @@ dependencies:
   fl_chart: ^0.70.0 # Statistics dashboard
   share_plus: ^10.1.0 # JSON workout export
   json_annotation: ^4.9.0
+  rxdart: ^0.28.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

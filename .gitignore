@@ -44,4 +44,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /windows
-lib/core/constants.dart
+/core/constants.dart

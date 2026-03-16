@@ -18,7 +18,7 @@ class DashboardScreen extends ConsumerWidget {
       body: workoutsAsync.when(
         data: (workouts) => CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _VolumeChart()), // Summary Chart
+            SliverToBoxAdapter(child: _VolumeChart(hasData:false)), // Summary Chart
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) => ListTile(

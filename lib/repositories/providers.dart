@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:workout_minds/core/constants.dart';
 import 'package:workout_minds/data/local/database.dart';
+import 'package:workout_minds/services/workout_audio_handler.dart';
 import 'ai_workout_repository.dart';
 
 // The Database Provider
@@ -32,4 +33,8 @@ final aiRepositoryProvider = Provider<AIWorkoutRepository>((ref) {
 final workoutDetailsProvider = FutureProvider.family<List<TypedResult>, int>((ref, workoutId) {
   final db = ref.watch(databaseProvider);
   return db.getWorkoutDetails(workoutId);
+});
+
+final audioHandlerProvider = Provider<WorkoutAudioHandler>((ref) {
+  throw UnimplementedError('audioHandlerProvider must be overridden in main.dart');
 });
