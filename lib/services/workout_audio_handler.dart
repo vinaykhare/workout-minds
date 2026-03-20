@@ -188,6 +188,23 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         },
       ),
     );
+
+    // NEW: Broadcasts the state so the Android Notification tray updates!
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: [
+          // Index 0: Skip Button
+          MediaControl.skipToNext,
+          // Index 1: Stop Button
+          MediaControl.stop,
+        ],
+        systemActions: const {MediaAction.seek},
+        // FIX: Added the array after the const keyword!
+        androidCompactActionIndices: const [],
+        processingState: AudioProcessingState.ready,
+        playing: true, // IMPORTANT: Tells Android not to kill the app!
+      ),
+    );
   }
 
   @override

@@ -597,7 +597,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                                               )
                                             : _NumberInputRow(
                                                 label: 'Reps:',
-                                                value: ex.reps ?? 10,
+                                                value: ex.reps,
                                                 onChanged: (val) =>
                                                     notifier.updateExercise(
                                                       index,

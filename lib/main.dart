@@ -23,10 +23,11 @@ Future<void> main() async {
     builder: () => WorkoutAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId:
-          'com.yourcompany.workout_minds.channel.audio',
+          'io.github.vinaykhare.workout_minds.channel.audio',
       androidNotificationChannelName: 'Workout Execution',
       androidNotificationOngoing:
           true, // Prevents user from swiping away the active workout
+      androidShowNotificationBadge: true,
     ),
   );
 

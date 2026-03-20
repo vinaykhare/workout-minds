@@ -14,7 +14,8 @@ class ActiveWorkoutScreen extends ConsumerStatefulWidget {
 }
 
 class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
-  bool _isButtonLocked = false; // Local UI lock to prevent button mashing
+  bool _isButtonLocked = false;
+  bool _isFullScreenImage = false; // FIX: Controls the double-tap state!
 
   void _handleAdvance(WorkoutAudioHandler handler) async {
     if (_isButtonLocked) return;
@@ -31,8 +32,6 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         final currEx = extras['currentExerciseIndex'] ?? 1;
         final totalSets = extras['totalSets'] ?? 1;
         final currSet = extras['currentSet'] ?? 1;
-
-        // Rough percentage based on exercises completed
         final percent = (currEx / totalEx);
 
         return Padding(
@@ -84,8 +83,6 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
       if (isComplete && mounted) {
         await db.logWorkoutCompletion(handler.currentWorkoutId!, 100);
         ref.invalidate(weeklyStatsProvider);
-
-        // FIX: Removed Navigator.pop(context); so the screen stays visible!
       }
     });
   }
@@ -95,13 +92,19 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     final handler = ref.read(audioHandlerProvider);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Active Workout'),
-        automaticallyImplyLeading:
-            false, // Hide back button to prevent accidental quits
+        title: const Text(
+          'Active Workout',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.pie_chart),
+            icon: const Icon(Icons.pie_chart, color: Colors.white),
             onPressed: () async {
               final media = await handler.mediaItem.first;
               if (media?.extras != null) _showStatusModal(media!.extras!);
@@ -124,217 +127,312 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           final imageUrl = extras['imageUrl'] as String?;
           final localImagePath = extras['localImagePath'] as String?;
 
-          return Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // --- 1. INTRO SCREEN ---
-                if (stateType == 'intro') ...[
-                  const Icon(
-                    Icons.fitness_center,
-                    size: 80,
-                    color: Colors.blue,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Workout Started.\nLet's crush it!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, color: Colors.grey),
-                  ),
-                ],
+          // Helper boolean to check if we are in an exercise state
+          final isExercise =
+              stateType == 'exercise_rep' || stateType == 'exercise_time';
 
-                // --- 2. EXERCISE (REP OR TIME) SCREEN ---
-                if (stateType == 'exercise_rep' ||
-                    stateType == 'exercise_time') ...[
-                  _buildThumbnail(localImagePath, imageUrl, context),
-                  Text(
-                    exName,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    snapshot.data!.artist ?? '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (stateType == 'exercise_rep')
-                    _targetBadge('Target: $reps Reps', context)
-                  else
-                    _targetBadge('Time Left: $timerValue s', context),
-
-                  const Spacer(),
-                  FilledButton.icon(
-                    onPressed: _isButtonLocked
-                        ? null
-                        : () => _handleAdvance(handler),
-                    icon: Icon(
-                      stateType == 'exercise_rep'
-                          ? Icons.check_circle
-                          : Icons.skip_next,
-                    ),
-                    label: Text(
-                      stateType == 'exercise_rep'
-                          ? 'Finish Set'
-                          : 'Skip Remaining Time',
-                    ),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                    ),
-                  ),
-                ],
-
-                // --- 3. REST SCREEN ---
-                if (stateType == 'rest') ...[
-                  const Icon(Icons.timer, size: 80, color: Colors.orange),
-                  const SizedBox(height: 24),
-                  const Text(
-                    "Rest Time",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '$timerValue',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 80,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const Spacer(),
-                  OutlinedButton.icon(
-                    onPressed: _isButtonLocked
-                        ? null
-                        : () => _handleAdvance(handler),
-                    icon: const Icon(Icons.fast_forward),
-                    label: const Text('Skip Rest'),
-                  ),
-                ],
-
-                // --- 4. OUTRO SCREEN ---
-                // --- 4. OUTRO SCREEN ---
-                if (stateType == 'outro') ...[
-                  const Icon(
-                    Icons.emoji_events,
-                    size: 100,
-                    color: Colors.amber,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    "Workout Complete!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // --- LAYER 1: FULL SCREEN BACKGROUND (Only if enabled and is an exercise) ---
+              if (isExercise && _isFullScreenImage) ...[
+                GestureDetector(
+                  onDoubleTap: () => setState(() => _isFullScreenImage = false),
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      // NEW: Restart Button
-                      FilledButton.icon(
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Restart Workout'),
-                        onPressed: () {
-                          handler.restartWorkout();
-                        },
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.home),
-                        label: const Text('Go Home / Dashboard'),
-                        onPressed: () {
-                          handler.stop();
-                          Navigator.pop(context); // Manual pop happens here now
-                        },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
+                      if (localImagePath != null && localImagePath.isNotEmpty)
+                        Image.file(File(localImagePath), fit: BoxFit.cover)
+                      else if (imageUrl != null && imageUrl.isNotEmpty)
+                        Image.network(imageUrl, fit: BoxFit.cover)
+                      else
+                        Container(color: Colors.grey.shade900),
+
+                      // Gradient Overlay so text is readable
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withAlpha(150),
+                              Colors.transparent,
+                              Colors.black.withAlpha(220),
+                              Colors.black,
+                            ],
+                            stops: const [0.0, 0.4, 0.7, 1.0],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
-
-                // GLOBAL ABORT BUTTON (Hidden on Outro)
-                if (stateType != 'outro') ...[
-                  const SizedBox(height: 16),
-                  TextButton.icon(
-                    icon: const Icon(Icons.stop_circle, color: Colors.red),
-                    label: const Text(
-                      'End Workout Early',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    onPressed: () async {
-                      await handler.stop();
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                  ),
-                ],
+                ),
               ],
-            ),
+
+              // --- LAYER 2: THE UI CONTENT ---
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- 1. INTRO SCREEN ---
+                      if (stateType == 'intro') ...[
+                        const Icon(
+                          Icons.fitness_center,
+                          size: 80,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Workout Started.\nLet's crush it!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 20, color: Colors.white70),
+                        ),
+                      ],
+
+                      // --- 2. EXERCISE SCREEN ---
+                      if (isExercise) ...[
+                        // FIX: Show the inline rounded image ONLY if full screen is disabled
+                        if (!_isFullScreenImage)
+                          Expanded(
+                            child: GestureDetector(
+                              onDoubleTap: () =>
+                                  setState(() => _isFullScreenImage = true),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 24),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade900,
+                                  borderRadius: BorderRadius.circular(24),
+                                  image: _getDecorationImage(
+                                    localImagePath,
+                                    imageUrl,
+                                  ),
+                                ),
+                                child:
+                                    _getDecorationImage(
+                                          localImagePath,
+                                          imageUrl,
+                                        ) ==
+                                        null
+                                    ? const Icon(
+                                        Icons.fitness_center,
+                                        size: 64,
+                                        color: Colors.grey,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          )
+                        else
+                          const Spacer(), // Pushes content down if image is full screen
+
+                        Text(
+                          exName,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          snapshot.data!.artist ?? '',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        if (stateType == 'exercise_rep')
+                          _targetBadge('Target: $reps Reps', context)
+                        else
+                          _targetBadge('Time Left: $timerValue s', context),
+
+                        const SizedBox(height: 32),
+                        FilledButton.icon(
+                          onPressed: _isButtonLocked
+                              ? null
+                              : () => _handleAdvance(handler),
+                          icon: Icon(
+                            stateType == 'exercise_rep'
+                                ? Icons.check_circle
+                                : Icons.skip_next,
+                          ),
+                          label: Text(
+                            stateType == 'exercise_rep'
+                                ? 'Finish Set'
+                                : 'Skip Remaining Time',
+                          ),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                          ),
+                        ),
+                      ],
+
+                      // --- 3. REST SCREEN ---
+                      if (stateType == 'rest') ...[
+                        const Icon(Icons.timer, size: 80, color: Colors.orange),
+                        const SizedBox(height: 24),
+                        const Text(
+                          "Rest Time",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '$timerValue',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 100,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: _isButtonLocked
+                              ? null
+                              : () => _handleAdvance(handler),
+                          icon: const Icon(
+                            Icons.fast_forward,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Skip Rest',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white),
+                            padding: const EdgeInsets.all(16),
+                          ),
+                        ),
+                      ],
+
+                      // --- 4. OUTRO SCREEN ---
+                      if (stateType == 'outro') ...[
+                        const Icon(
+                          Icons.emoji_events,
+                          size: 100,
+                          color: Colors.amber,
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          "Workout Complete!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Spacer(),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FilledButton.icon(
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Restart Workout'),
+                              onPressed: () => handler.restartWorkout(),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.all(16),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // FIX: Removed the Scheduled Notification Button entirely!
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.home, color: Colors.white),
+                              label: const Text(
+                                'Go Home / Dashboard',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              onPressed: () {
+                                handler.stop();
+                                Navigator.pop(context);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.white),
+                                padding: const EdgeInsets.all(16),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      // GLOBAL ABORT BUTTON
+                      if (stateType != 'outro') ...[
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          icon: const Icon(
+                            Icons.stop_circle,
+                            color: Colors.redAccent,
+                          ),
+                          label: const Text(
+                            'End Workout Early',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 16,
+                            ),
+                          ),
+                          onPressed: () async {
+                            await handler.stop();
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  // Helper Widget for Image
-  Widget _buildThumbnail(String? local, String? network, BuildContext context) {
-    if (local == null && (network == null || network.isEmpty)) {
-      return const SizedBox(height: 120);
+  // Helper to safely extract image provider for the Box Decoration
+  DecorationImage? _getDecorationImage(String? local, String? network) {
+    if (local != null && local.isNotEmpty) {
+      return DecorationImage(image: FileImage(File(local)), fit: BoxFit.cover);
     }
-    return Container(
-      width: 120,
-      height: 120,
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary,
-          width: 4,
-        ),
-        image: DecorationImage(
-          fit: BoxFit.cover,
-          image: local != null
-              ? FileImage(File(local)) as ImageProvider
-              : NetworkImage(network!),
-        ),
-      ),
-    );
+    if (network != null && network.isNotEmpty) {
+      return DecorationImage(image: NetworkImage(network), fit: BoxFit.cover);
+    }
+    return null;
   }
 
-  // Helper Widget for Target Badge
   Widget _targetBadge(String text, BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(24),
+        color: Theme.of(context).colorScheme.primary.withAlpha(200),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
+        style: const TextStyle(
+          fontSize: 24,
+          color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
       ),
