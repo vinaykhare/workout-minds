@@ -42,6 +42,14 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
     super.dispose();
   }
 
+  String _formatTime(int totalSeconds) {
+    final int mins = totalSeconds ~/ 60;
+    final int secs = totalSeconds % 60;
+    if (mins > 0 && secs > 0) return '${mins}m ${secs}s';
+    if (mins > 0) return '${mins}m';
+    return '${secs}s';
+  }
+
   void _removeWithUndo(
     BuildContext context,
     int index,
@@ -70,6 +78,10 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
     WorkoutDraftNotifier notifier,
   ) async {
     final nameController = TextEditingController(text: ex.name);
+    nameController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: nameController.text.length,
+    );
 
     await showDialog(
       context: context,
@@ -171,7 +183,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
 
                   try {
                     // Launches the phone's native web browser
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                    await launchUrl(url, mode: LaunchMode.inAppBrowserView);
                   } catch (e) {
                     if (dialogContext.mounted) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -391,166 +403,302 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
             child: draftExercises.isEmpty
                 ? const Center(child: Text('Tap + to add your first exercise'))
                 : ReorderableListView.builder(
+                    // FIX 3: Add this padding so the FAB doesn't block the last item!
+                    padding: const EdgeInsets.only(bottom: 100),
                     itemCount: draftExercises.length,
                     onReorder: (oldIndex, newIndex) =>
                         notifier.reorder(oldIndex, newIndex),
                     itemBuilder: (context, index) {
                       final ex = draftExercises[index];
-                      return Card(
+                      final isLast = index == draftExercises.length - 1;
+
+                      return Column(
                         key: ValueKey('exercise_${ex.name}_$index'),
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: ExpansionTile(
-                          // Image Click -> Show Image Dialog
-                          leading: InkWell(
-                            onTap: () =>
-                                _showImageDialog(context, index, ex, notifier),
-                            child: Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              clipBehavior: Clip.hardEdge,
-                              child: ex.localImagePath != null
-                                  ? Image.file(
-                                      File(ex.localImagePath!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : (ex.imageUrl != null &&
-                                        ex.imageUrl!.isNotEmpty)
-                                  ? Image.network(
-                                      ex.imageUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (ctx, err, stack) =>
-                                          const Icon(
-                                            Icons.broken_image,
-                                            color: Colors.red,
-                                          ),
-                                    )
-                                  : const Icon(
-                                      Icons.add_a_photo,
-                                      color: Colors.grey,
-                                    ),
+                        children: [
+                          Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
                             ),
-                          ),
-                          title: Row(
-                            children: [
-                              // Title Click -> Show Title Dialog
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => _showTitleDialog(
-                                    context,
-                                    index,
-                                    ex,
-                                    notifier,
-                                  ),
-                                  child: Text(
-                                    ex.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
-                                ),
-                                onPressed: () => _removeWithUndo(
+                            clipBehavior: Clip.antiAlias,
+                            child: ExpansionTile(
+                              leading: InkWell(
+                                onTap: () => _showImageDialog(
                                   context,
                                   index,
                                   ex,
                                   notifier,
                                 ),
+                                child: Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  clipBehavior: Clip.hardEdge,
+                                  child: ex.localImagePath != null
+                                      ? Image.file(
+                                          File(ex.localImagePath!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : (ex.imageUrl != null &&
+                                            ex.imageUrl!.isNotEmpty)
+                                      ? Image.network(
+                                          ex.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (ctx, err, stack) =>
+                                              const Icon(
+                                                Icons.broken_image,
+                                                color: Colors.red,
+                                              ),
+                                        )
+                                      : const Icon(
+                                          Icons.add_a_photo,
+                                          color: Colors.grey,
+                                        ),
+                                ),
                               ),
-                            ],
-                          ),
-                          subtitle: Text('${ex.sets} Sets x ${ex.reps} Reps'),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
+                              title: Row(
                                 children: [
-                                  _NumberInputRow(
-                                    label: 'Sets:',
-                                    value: ex.sets,
-                                    onChanged: (val) => notifier.updateExercise(
-                                      index,
-                                      ex.copyWith(sets: val),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => _showTitleDialog(
+                                        context,
+                                        index,
+                                        ex,
+                                        notifier,
+                                      ),
+                                      child: Text(
+                                        ex.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
                                     ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () => _removeWithUndo(
+                                      context,
+                                      index,
+                                      ex,
+                                      notifier,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Text(
+                                ex.isDuration
+                                    ? '${ex.sets} Sets x ${ex.durationSeconds}s  •  Rest: ${ex.restSecondsSet}s'
+                                    : '${ex.sets} Sets x ${ex.reps} Reps  •  Rest: ${ex.restSecondsSet}s',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final isWide = constraints.maxWidth > 500;
 
-                                  _DurationInputRow(
-                                    label: 'Rest Between Sets:',
-                                    totalSeconds: ex.restSecondsSet,
+                                      Widget buildTopRow() {
+                                        return isWide
+                                            ? Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    child: _SwitchInputRow(
+                                                      label:
+                                                          'Time-based Exercise',
+                                                      value: ex.isDuration,
+                                                      onChanged: (val) =>
+                                                          notifier
+                                                              .updateExercise(
+                                                                index,
+                                                                ex.copyWith(
+                                                                  isDuration:
+                                                                      val,
+                                                                ),
+                                                              ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 32),
+                                                  Expanded(
+                                                    child: _NumberInputRow(
+                                                      label: 'Sets:',
+                                                      value: ex.sets,
+                                                      onChanged: (val) =>
+                                                          notifier
+                                                              .updateExercise(
+                                                                index,
+                                                                ex.copyWith(
+                                                                  sets: val,
+                                                                ),
+                                                              ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment
+                                                        .start, // FIX: Forces Left-Align in Portrait mode!
+                                                children: [
+                                                  _SwitchInputRow(
+                                                    label:
+                                                        'Time-based Exercise',
+                                                    value: ex.isDuration,
+                                                    onChanged: (val) =>
+                                                        notifier.updateExercise(
+                                                          index,
+                                                          ex.copyWith(
+                                                            isDuration: val,
+                                                          ),
+                                                        ),
+                                                  ),
+                                                  _NumberInputRow(
+                                                    label: 'Sets:',
+                                                    value: ex.sets,
+                                                    onChanged: (val) =>
+                                                        notifier.updateExercise(
+                                                          index,
+                                                          ex.copyWith(
+                                                            sets: val,
+                                                          ),
+                                                        ),
+                                                  ),
+                                                ],
+                                              );
+                                      }
+
+                                      Widget buildBottomRow() {
+                                        Widget repOrTimeWidget = ex.isDuration
+                                            ? _DurationInputRow(
+                                                label: 'Duration:',
+                                                totalSeconds:
+                                                    ex.durationSeconds ?? 30,
+                                                onChanged: (val) =>
+                                                    notifier.updateExercise(
+                                                      index,
+                                                      ex.copyWith(
+                                                        durationSeconds: val,
+                                                      ),
+                                                    ),
+                                              )
+                                            : _NumberInputRow(
+                                                label: 'Reps:',
+                                                value: ex.reps ?? 10,
+                                                onChanged: (val) =>
+                                                    notifier.updateExercise(
+                                                      index,
+                                                      ex.copyWith(reps: val),
+                                                    ),
+                                              );
+
+                                        Widget restWidget = _DurationInputRow(
+                                          label: 'Rest Between Sets:',
+                                          totalSeconds: ex.restSecondsSet,
+                                          onChanged: (val) =>
+                                              notifier.updateExercise(
+                                                index,
+                                                ex.copyWith(
+                                                  restSecondsSet: val,
+                                                ),
+                                              ),
+                                        );
+
+                                        return isWide
+                                            ? Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    child: repOrTimeWidget,
+                                                  ),
+                                                  const SizedBox(width: 32),
+                                                  Expanded(child: restWidget),
+                                                ],
+                                              )
+                                            : Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment
+                                                        .start, // FIX: Forces Left-Align in Portrait mode!
+                                                children: [
+                                                  repOrTimeWidget,
+                                                  restWidget,
+                                                ],
+                                              );
+                                      }
+
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          buildTopRow(),
+                                          buildBottomRow(),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                                Container(
+                                  width: double.infinity,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withAlpha(128),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                    vertical: 8.0,
+                                  ),
+                                  child: _DurationInputRow(
+                                    label: 'Rest Before Next Exercise:',
+                                    totalSeconds: ex.restSecondsExercise,
                                     onChanged: (val) => notifier.updateExercise(
                                       index,
-                                      ex.copyWith(restSecondsSet: val),
+                                      ex.copyWith(restSecondsExercise: val),
                                     ),
                                   ),
-                                  SwitchListTile(
-                                    title: const Text(
-                                      'Time-based Exercise (e.g. Planks)',
-                                    ),
-                                    value: ex.isDuration,
-                                    onChanged: (val) => notifier.updateExercise(
-                                      index,
-                                      ex.copyWith(isDuration: val),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isLast)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.arrow_downward,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Rest ${_formatTime(ex.restSecondsExercise)} before next exercise',
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  if (!ex.isDuration)
-                                    _NumberInputRow(
-                                      label: 'Reps:',
-                                      value: ex.reps,
-                                      onChanged: (val) =>
-                                          notifier.updateExercise(
-                                            index,
-                                            ex.copyWith(reps: val),
-                                          ),
-                                    )
-                                  else
-                                    _DurationInputRow(
-                                      label: 'Duration:',
-                                      totalSeconds: ex.durationSeconds ?? 30,
-                                      onChanged: (val) =>
-                                          notifier.updateExercise(
-                                            index,
-                                            ex.copyWith(durationSeconds: val),
-                                          ),
-                                    ),
                                 ],
                               ),
                             ),
-                            Container(
-                              width: double.infinity,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withAlpha(128),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 8.0,
-                              ),
-                              child: _DurationInputRow(
-                                label: 'Rest Before Next Exercise:',
-                                totalSeconds: ex.restSecondsExercise,
-                                onChanged: (val) => notifier.updateExercise(
-                                  index,
-                                  ex.copyWith(restSecondsExercise: val),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       );
                     },
                   ),
@@ -573,7 +721,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
 
 // NOTE: Keep your _NumberInputRow and _DurationInputRow classes down here!
 // I've omitted them here for brevity, but they stay exactly the same.
-
+// FIX 1: NumberInputRow gets the Box Decoration treatment
 class _NumberInputRow extends StatelessWidget {
   final String label;
   final int value;
@@ -588,46 +736,50 @@ class _NumberInputRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withAlpha(128),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline),
-            onPressed: () => onChanged((value - 1).clamp(1, 999)),
-          ),
-          SizedBox(
-            width: 50, // Fixed width prevents jittering
-            child: TextFormField(
-              key: ValueKey(value.toString()), // Syncs with the +/- buttons
-              initialValue: value.toString().padLeft(2, '0'),
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 4,
+            child: Row(
+              mainAxisSize: MainAxisSize.min, // Keeps it compact!
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: () => onChanged((value - 1).clamp(1, 999)),
                 ),
-                border: OutlineInputBorder(),
-              ),
-              onFieldSubmitted: (val) {
-                final parsed = int.tryParse(val);
-                if (parsed != null) {
-                  onChanged(parsed.clamp(1, 999));
-                }
-              },
+                SizedBox(
+                  width: 50,
+                  child: TextFormField(
+                    key: ValueKey(value.toString()),
+                    initialValue: value.toString(),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                    ), // Removed the harsh outline
+                    onFieldSubmitted: (val) {
+                      final parsed = int.tryParse(val);
+                      if (parsed != null) onChanged(parsed.clamp(1, 999));
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () => onChanged(value + 1),
+                ),
+              ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => onChanged(value + 1),
           ),
         ],
       ),
@@ -635,7 +787,8 @@ class _NumberInputRow extends StatelessWidget {
   }
 }
 
-// NEW: Splits raw seconds into Minutes and Seconds for the UI
+// FIX 4: DurationPicker redesigned with isolated minute/second boxes & user layout tweaks
+// FIX: Swapped 'Row' for 'Wrap' to prevent RenderFlex overflow on narrow screens!
 class _DurationInputRow extends StatelessWidget {
   final String label;
   final int totalSeconds;
@@ -653,44 +806,112 @@ class _DurationInputRow extends StatelessWidget {
     final int secs = totalSeconds % 60;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10, // Adds horizontal space between the boxes
+            runSpacing: 10, // Adds vertical space if they wrap to the next line
+            children: [
+              // Minutes Box
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withAlpha(128),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () =>
+                          onChanged(((mins - 1).clamp(0, 59) * 60) + secs),
+                    ),
+                    Text(
+                      '${mins.toString().padLeft(2, '0')} min',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () =>
+                          onChanged(((mins + 1).clamp(0, 59) * 60) + secs),
+                    ),
+                  ],
+                ),
+              ),
+              // Seconds Box
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withAlpha(128),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () =>
+                          onChanged((mins * 60) + (secs - 5).clamp(0, 59)),
+                    ),
+                    Text(
+                      '${secs.toString().padLeft(2, '0')} sec',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () =>
+                          onChanged((mins * 60) + (secs + 5).clamp(0, 59)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+}
 
-          // Minutes
-          IconButton(
-            icon: const Icon(Icons.remove),
-            onPressed: () => onChanged(((mins - 1).clamp(0, 59) * 60) + secs),
-          ),
-          Text(
-            '${mins.toString().padLeft(2, '0')}m',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => onChanged(((mins + 1).clamp(0, 59) * 60) + secs),
-          ),
+// FIX 1 & 2: A custom Switch row that perfectly matches the layout of Sets/Reps
+class _SwitchInputRow extends StatelessWidget {
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
-          const SizedBox(width: 8),
+  const _SwitchInputRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
-          // Seconds
-          IconButton(
-            icon: const Icon(Icons.remove),
-            onPressed: () => onChanged((mins * 60) + (secs - 5).clamp(0, 55)),
-          ),
-          Text(
-            '${secs.toString().padLeft(2, '0')}s',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => onChanged((mins * 60) + (secs + 5).clamp(0, 59)),
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          Container(
+            height:
+                48, // Matches the approximate height of the other input boxes
+            alignment: Alignment.centerLeft,
+            child: Switch(value: value, onChanged: onChanged),
           ),
         ],
       ),

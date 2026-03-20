@@ -75,6 +75,22 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    final handler = ref.read(audioHandlerProvider);
+    final db = ref.read(databaseProvider);
+
+    handler.workoutCompleteStream.listen((isComplete) async {
+      if (isComplete && mounted) {
+        await db.logWorkoutCompletion(handler.currentWorkoutId!, 100);
+        ref.invalidate(weeklyStatsProvider);
+
+        // FIX: Removed Navigator.pop(context); so the screen stays visible!
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final handler = ref.read(audioHandlerProvider);
 
@@ -214,6 +230,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                 ],
 
                 // --- 4. OUTRO SCREEN ---
+                // --- 4. OUTRO SCREEN ---
                 if (stateType == 'outro') ...[
                   const Icon(
                     Icons.emoji_events,
@@ -227,12 +244,33 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                     style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
-                  FilledButton(
-                    onPressed: () {
-                      handler.stop();
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Go Home / Dashboard'),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // NEW: Restart Button
+                      FilledButton.icon(
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Restart Workout'),
+                        onPressed: () {
+                          handler.restartWorkout();
+                        },
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.home),
+                        label: const Text('Go Home / Dashboard'),
+                        onPressed: () {
+                          handler.stop();
+                          Navigator.pop(context); // Manual pop happens here now
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
 

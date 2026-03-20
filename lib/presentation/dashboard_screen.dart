@@ -23,7 +23,7 @@ class DashboardScreen extends ConsumerWidget {
       body: workoutsAsync.when(
         data: (workouts) => CustomScrollView(
           slivers: [
-            const SliverToBoxAdapter(child: _VolumeChart(hasData: false)),
+            const SliverToBoxAdapter(child: _VolumeChart()),
             SliverList(
               delegate: SliverChildBuilderDelegate((context, index) {
                 final workout = workouts[index];
@@ -224,67 +224,175 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _VolumeChart extends StatelessWidget {
-  final bool hasData;
-
-  const _VolumeChart({this.hasData = false});
+class _VolumeChart extends ConsumerWidget {
+  const _VolumeChart();
 
   @override
-  Widget build(BuildContext context) {
-    if (!hasData) {
-      return Container(
-        height: 200,
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.show_chart,
-                size: 48,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'No workout data yet',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Tap the button below to generate your first plan.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chartDataAsync = ref.watch(weeklyStatsProvider);
 
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
-      child: LineChart(
-        LineChartData(
-          gridData: const FlGridData(show: false),
-          titlesData: const FlTitlesData(show: false),
-          lineBarsData: [
-            LineChartBarData(
-              spots: [
-                const FlSpot(0, 1),
-                const FlSpot(1, 3),
-                const FlSpot(2, 2),
-              ],
-              isCurved: true,
-              color: Theme.of(context).primaryColor,
-              barWidth: 4,
-            ),
-          ],
-        ),
+    return chartDataAsync.when(
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
       ),
+      error: (err, stack) => const SizedBox(
+        height: 200,
+        child: Center(child: Text('Chart Error')),
+      ),
+      data: (spots) {
+        final hasData = spots.isNotEmpty && spots.any((spot) => spot.y > 0);
+
+        if (!hasData) {
+          return Container(
+            height: 200,
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.show_chart,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No workout data yet',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Complete a workout to see your progress!',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // FIX: Find the highest volume to set a dynamic Y-axis ceiling
+        double maxVolume = 0;
+        for (var spot in spots) {
+          if (spot.y > maxVolume) maxVolume = spot.y;
+        }
+
+        return Container(
+          height: 200,
+          // FIX: Add padding so the labels don't clip off the screen
+          padding: const EdgeInsets.only(
+            top: 24,
+            right: 24,
+            left: 16,
+            bottom: 16,
+          ),
+          child: LineChart(
+            LineChartData(
+              minX: 0,
+              maxX: 6,
+              minY: 0,
+              maxY:
+                  maxVolume *
+                  1.2, // FIX: Adds 20% headroom above the highest peak
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: maxVolume > 0
+                    ? (maxVolume / 4).ceilToDouble()
+                    : 25,
+                getDrawingHorizontalLine: (value) =>
+                    FlLine(color: Colors.grey.withAlpha(50), strokeWidth: 1),
+              ),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                // FIX: Added left labels so you can actually see the Volume numbers!
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (value, meta) {
+                      if (value == 0 || value == maxVolume * 1.2) {
+                        return const SizedBox.shrink();
+                      }
+                      return Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    getTitlesWidget: (value, meta) {
+                      if (value < 0 || value > 6) {
+                        return const SizedBox.shrink();
+                      }
+                      final date = DateTime.now().subtract(
+                        Duration(days: 6 - value.toInt()),
+                      );
+                      final dayNames = [
+                        'Mon',
+                        'Tue',
+                        'Wed',
+                        'Thu',
+                        'Fri',
+                        'Sat',
+                        'Sun',
+                      ];
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          dayNames[date.weekday - 1],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  preventCurveOverShooting:
+                      true, // FIX: Stops the line from dropping below zero
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary, // FIX: Better contrast on dark mode
+                  barWidth: 4,
+                  isStrokeCapRound: true,
+                  dotData: const FlDotData(
+                    show: true,
+                  ), // FIX: Draws explicit circles on data points
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: Theme.of(context).colorScheme.primary.withAlpha(50),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -320,6 +428,7 @@ Future<void> _startWorkoutDirectly(
       'name': ex.name,
       'sets': details.targetSets,
       'reps': details.targetReps,
+      'durationSeconds': details.targetDurationSeconds, // FIX: Added this back!
       'restSecondsSet': details.restSecondsAfterSet,
       'restSecondsExercise': details.restSecondsAfterExercise,
       'imageUrl': ex.imageUrl,
@@ -332,7 +441,7 @@ Future<void> _startWorkoutDirectly(
   final workout = await (db.select(
     db.workouts,
   )..where((t) => t.id.equals(workoutId))).getSingle();
-  handler.startWorkoutSequence(routine, workout.title);
+  handler.startWorkoutSequence(routine, workout.title, workout.id);
 
   if (!context.mounted) return;
 

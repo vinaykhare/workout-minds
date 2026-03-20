@@ -11,14 +11,21 @@ class WorkoutAudioHandler extends BaseAudioHandler {
   int _currentIndex = 0;
   int _currentSet = 1;
   String _workoutTitle = "";
+  // int _currentWorkoutId;
 
   bool _isWorkoutActive = false;
   bool _isProcessingAction = false; // The Double-Tap Lock
+  // --- ADD THESE MISSING VARIABLES ---
+  int? currentWorkoutId;
+  final StreamController<bool> _workoutCompleteController =
+      StreamController<bool>.broadcast();
+  Stream<bool> get workoutCompleteStream => _workoutCompleteController.stream;
 
   String _currentScreenState =
       'intro'; // 'intro', 'exercise_rep', 'exercise_time', 'rest', 'outro'
   int _currentTimerSeconds = 0;
   Timer? _stateTimer;
+  Timer? _introTimer; // Dedicated timer for the intro
 
   WorkoutAudioHandler() {
     flutterTts.setLanguage("en-US");
@@ -31,7 +38,9 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     List<Map<String, dynamic>> routine,
     // AppLocalizations l10n,
     String workoutTitle,
+    int workoutId,
   ) async {
+    currentWorkoutId = workoutId;
     _routine = routine;
     // _l10n = l10n;
     _workoutTitle = workoutTitle;
@@ -48,7 +57,8 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     await flutterTts.speak("Workout Started. Let's crush it!");
 
     // Wait for the intro speech to finish (approx 3 seconds), then auto-advance if not interrupted
-    Future.delayed(const Duration(seconds: 3), () {
+    _introTimer?.cancel();
+    _introTimer = Timer(const Duration(seconds: 3), () {
       if (_isWorkoutActive && _currentScreenState == 'intro') {
         _startExercisePhase();
       }
@@ -118,6 +128,8 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         _currentScreenState = 'outro';
         _pushStateToUi();
         await flutterTts.speak("Workout Complete! Great job.");
+        // NEW: Tell a listener to log this! We'll use your existing stream.
+        _workoutCompleteController.add(true);
       }
     } else if (_currentScreenState == 'rest') {
       // Rest is over, start the next exercise phase
@@ -182,7 +194,14 @@ class WorkoutAudioHandler extends BaseAudioHandler {
   Future<void> stop() async {
     _isWorkoutActive = false;
     _stateTimer?.cancel();
+    _introTimer?.cancel(); // FIX: Kill the intro timer!
     await flutterTts.stop();
     return super.stop();
+  }
+
+  // NEW: Safely restarts the current routine from the beginning
+  Future<void> restartWorkout() async {
+    if (currentWorkoutId == null) return;
+    await startWorkoutSequence(_routine, _workoutTitle, currentWorkoutId!);
   }
 }

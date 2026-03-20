@@ -162,6 +162,29 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteWorkout(int workoutId) {
     return (delete(workouts)..where((t) => t.id.equals(workoutId))).go();
   }
+
+  // 1. Save the workout when completed
+  // 1. Save the workout when completed
+  Future<void> logWorkoutCompletion(int workoutId, int calculatedVolume) async {
+    await into(workoutLogs).insert(
+      WorkoutLogsCompanion(
+        workoutId: Value(workoutId),
+        executedAt: Value(DateTime.now()),
+        // FIX: Convert the int to a double to match your database schema
+        totalVolume: Value(calculatedVolume.toDouble()),
+        durationMinutes: const Value(0),
+      ),
+    );
+  }
+
+  // 2. Fetch data for the last 7 days
+  Future<List<WorkoutLog>> getWeeklyVolumeStats() async {
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
+    // Simple fetch: let Dart handle the math in the provider
+    return await (select(
+      workoutLogs,
+    )..where((t) => t.executedAt.isBiggerOrEqualValue(sevenDaysAgo))).get();
+  }
 }
 
 LazyDatabase _openConnection() {

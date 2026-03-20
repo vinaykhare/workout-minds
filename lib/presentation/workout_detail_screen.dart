@@ -173,7 +173,8 @@ class WorkoutDetailScreen extends ConsumerWidget {
               'name': ex.name,
               'sets': details.targetSets,
               'reps': details.targetReps,
-              'durationSeconds': details.targetDurationSeconds, // ADD THIS!
+              'durationSeconds':
+                  details.targetDurationSeconds, // FIX: Added this back!
               'restSecondsSet': details.restSecondsAfterSet,
               'restSecondsExercise': details.restSecondsAfterExercise,
               'imageUrl': ex.imageUrl,
@@ -185,7 +186,7 @@ class WorkoutDetailScreen extends ConsumerWidget {
 
           // Fire the audio and immediately push the screen without awaiting!
           // You already have access to `workout.title` here!
-          handler.startWorkoutSequence(routine, workout.title);
+          handler.startWorkoutSequence(routine, workout.title, workout.id);
           Navigator.push(
             context,
             MaterialPageRoute(
