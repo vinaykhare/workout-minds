@@ -12,7 +12,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get appTitle => 'Workout Minds';
 
   @override
-  String errorPrefix(String message) {
+  String errorPrefix(Object message) {
     return 'Arre error ho gaya: $message';
   }
 
@@ -20,7 +20,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get aiGenerate => 'AI se banao';
 
   @override
-  String get aiGeneratorTitle => 'Aaj kya Exercise karna hai?';
+  String get aiGeneratorTitle => 'Aaj kya hit karna hai?';
 
   @override
   String get aiGeneratorHint => 'Jaise: Heavy Chest Day';
@@ -52,16 +52,23 @@ class AppLocalizationsHi extends AppLocalizations {
   String get workoutComplete => 'Workout poora hua. Shabaash!';
 
   @override
-  String nextUp(Object name, Object reps, Object set, Object total) {
-    return 'Ab agli exercise: $name. Set $set of $total. Target hai $reps reps.';
+  String nextUp(Object name, Object reps, Object setNum, Object total) {
+    return 'Ab agli exercise: $name. Set $setNum of $total. Target hai $reps reps.';
   }
 
   @override
-  String get setCompleteRest => 'Set poora hua. Ab 60 seconds rest karo.';
+  String setCompleteRest(Object seconds) {
+    return 'Set poora hua. Ab $seconds seconds rest karo.';
+  }
 
   @override
-  String restOver(Object set) {
-    return 'Rest khatam. Set $set ke liye taiyaar ho jao.';
+  String exerciseCompleteRest(Object seconds) {
+    return 'Exercise poori hui. Ab $seconds seconds rest karo.';
+  }
+
+  @override
+  String restOver(Object setNum) {
+    return 'Rest khatam. Chalo set $setNum shuru karein!';
   }
 
   @override

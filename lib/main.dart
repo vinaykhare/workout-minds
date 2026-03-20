@@ -22,18 +22,18 @@ Future<void> main() async {
   final audioHandler = await AudioService.init(
     builder: () => WorkoutAudioHandler(),
     config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.yourcompany.workout_minds.channel.audio',
+      androidNotificationChannelId:
+          'com.yourcompany.workout_minds.channel.audio',
       androidNotificationChannelName: 'Workout Execution',
-      androidNotificationOngoing: true, // Prevents user from swiping away the active workout
+      androidNotificationOngoing:
+          true, // Prevents user from swiping away the active workout
     ),
   );
 
   runApp(
     ProviderScope(
       // Inject the initialized audioHandler into the Riverpod tree
-      overrides: [
-        audioHandlerProvider.overrideWithValue(audioHandler),
-      ],
+      overrides: [audioHandlerProvider.overrideWithValue(audioHandler)],
       child: const WorkoutMindsApp(),
     ),
   );

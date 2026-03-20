@@ -1,13 +1,6 @@
 {
   "appTitle": "Workout Minds",
   "errorPrefix": "Error: {message}",
-  "@errorPrefix": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "aiGenerate": "AI Generate",
   "aiGeneratorTitle": "What are we hitting today?",
   "aiGeneratorHint": "e.g. Heavy Chest Day",
@@ -19,9 +12,10 @@
   "workoutPaused": "Workout paused.",
   "workoutStopped": "Workout stopped. Great job today!",
   "workoutComplete": "Workout complete. Fantastic job today!",
-  "nextUp": "Next up: {name}. Set {set} of {total}. Target is {reps} reps.",
-  "setCompleteRest": "Set complete. Rest for 60 seconds.",
-  "restOver": "Rest is over. Get ready for set {set}.",
+  "nextUp": "Next up: {name}. Set {setNum} of {total}. Target is {reps} reps.",
+  "setCompleteRest": "Set complete. Rest for {seconds} seconds.",
+  "exerciseCompleteRest": "Exercise complete. Rest for {seconds} seconds.",
+  "restOver": "Rest is over. Let's start set {setNum}!",
   "finishSet": "FINISH SET",
   "endWorkout": "End Workout Early",
   "restTime": "Rest Time",

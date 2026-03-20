@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Workout Minds';
 
   @override
-  String errorPrefix(String message) {
+  String errorPrefix(Object message) {
     return 'Error: $message';
   }
 
@@ -51,16 +51,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutComplete => 'Workout complete. Fantastic job today!';
 
   @override
-  String nextUp(Object name, Object reps, Object set, Object total) {
-    return 'Next up: $name. Set $set of $total. Target is $reps reps.';
+  String nextUp(Object name, Object reps, Object setNum, Object total) {
+    return 'Next up: $name. Set $setNum of $total. Target is $reps reps.';
   }
 
   @override
-  String get setCompleteRest => 'Set complete. Rest for 60 seconds.';
+  String setCompleteRest(Object seconds) {
+    return 'Set complete. Rest for $seconds seconds.';
+  }
 
   @override
-  String restOver(Object set) {
-    return 'Rest is over. Get ready for set $set.';
+  String exerciseCompleteRest(Object seconds) {
+    return 'Exercise complete. Rest for $seconds seconds.';
+  }
+
+  @override
+  String restOver(Object setNum) {
+    return 'Rest is over. Let\'s start set $setNum!';
   }
 
   @override

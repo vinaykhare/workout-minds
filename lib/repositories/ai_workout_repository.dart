@@ -9,8 +9,6 @@ class AIWorkoutRepository {
 
   AIWorkoutRepository(this._model, this._db);
 
-  // --- TOOLS (Agent Skills) ---
-
   // Tool 1: Let Gemini see the exercise library
   Future<String> fetchExerciseLibrary() async {
     final exercises = await _db.select(_db.exercises).get();
@@ -20,30 +18,41 @@ class AIWorkoutRepository {
   // Tool 2: Let Gemini see user performance history
   Future<String> fetchUserStats(String exerciseName) async {
     final logs = await (_db.select(_db.workoutLogs).join([
-      innerJoin(_db.exercises, _db.exercises.id.equalsExp(_db.workoutLogs.workoutId)),
-    ])..where(_db.exercises.name.equals(exerciseName)))
-        .get();
+      innerJoin(
+        _db.exercises,
+        _db.exercises.id.equalsExp(_db.workoutLogs.workoutId),
+      ),
+    ])..where(_db.exercises.name.equals(exerciseName))).get();
 
-    return jsonEncode(logs.map((row) => {
-      'date': row.readTable(_db.workoutLogs).executedAt.toString(),
-      'volume': row.readTable(_db.workoutLogs).totalVolume,
-    }).toList());
+    return jsonEncode(
+      logs
+          .map(
+            (row) => {
+              'date': row.readTable(_db.workoutLogs).executedAt.toString(),
+              'volume': row.readTable(_db.workoutLogs).totalVolume,
+            },
+          )
+          .toList(),
+    );
   }
-
-  // --- THE AGENTIC LOOP ---
 
   Future<void> generateWithTools(String userPrompt) async {
     final chat = _model.startChat();
 
-    // 1. Prompt Initiation with Strict Instructions
-    final enrichedPrompt = '''
-      You are an expert fitness coach. 
+    // 1. Prompt Initiation with STRICT Updated JSON Schema
+    // 1. Prompt Initiation with STRICT Updated JSON Schema
+    // 1. Prompt Initiation with STRICT JSON API Persona
+    // 1. Prompt Initiation with STRICT JSON API Persona & No-Refusal Clause
+    final enrichedPrompt =
+        '''
+      You are a strict Backend REST API that generates fitness routines.
       User Request: "$userPrompt"
       
       CRITICAL INSTRUCTIONS:
-      1. Use your tools to check the local exercise library or user stats if needed.
-      2. If the local library is empty or lacks suitable exercises, YOU MUST INVENT appropriate standard exercises (e.g., "Bench Press", "Squats").
-      3. Your final output MUST be ONLY a raw JSON array of objects. Do not include markdown blocks (```json), apologies, or conversational text.
+      1. Use your tools to check the local exercise library. If it lacks suitable exercises, invent standard ones (like Bench Press, Squats, etc.).
+      2. NEVER refuse a request or ask for clarification. If the user request is short or vague (like "chest day" or "workout"), just invent a highly effective standard workout that fits the theme.
+      3. YOU MUST RESPOND EXCLUSIVELY WITH A RAW JSON ARRAY. 
+      4. ABSOLUTELY NO CONVERSATIONAL TEXT. Do NOT say "Here is your workout" or "I am unable to generate".
       
       JSON Structure:
       [
@@ -51,7 +60,10 @@ class AIWorkoutRepository {
           "exercise_name": "Name of exercise",
           "muscle_group": "Target muscle",
           "target_sets": 3,
-          "target_reps": 10
+          "target_reps": 10,
+          "rest_seconds_set": 60,
+          "rest_seconds_exercise": 90,
+          "image_url": "" // CRITICAL: ALWAYS leave this as an empty string. DO NOT guess, fabricate, or generate URLs under any circumstances.
         }
       ]
     ''';
@@ -71,9 +83,8 @@ class AIWorkoutRepository {
         result = await fetchUserStats(call.args['exerciseName'] as String);
       }
 
-      // 3. Return local result to the Agent
       response = await chat.sendMessage(
-          Content.functionResponse(call.name, {'result': result})
+        Content.functionResponse(call.name, {'result': result}),
       );
     }
 
@@ -82,70 +93,99 @@ class AIWorkoutRepository {
       try {
         String rawText = response.text!;
 
-        // --- DEFENSIVE PARSING START ---
-        // Find the first '[' and the last ']' in the AI's response
         int startIndex = rawText.indexOf('[');
         int endIndex = rawText.lastIndexOf(']');
 
         if (startIndex == -1 || endIndex == -1) {
-          throw FormatException("Could not locate a JSON array in the AI response.");
+          throw FormatException(
+            "Could not locate a JSON array in the AI response.",
+          );
         }
 
-        // Extract strictly the JSON part
         String jsonString = rawText.substring(startIndex, endIndex + 1);
         final List<dynamic> decoded = jsonDecode(jsonString);
-        // --- DEFENSIVE PARSING END ---
 
         await _db.transaction(() async {
-          final workoutId = await _db.into(_db.workouts).insert(
-            WorkoutsCompanion.insert(
-              title: "AI Plan: $userPrompt",
-              difficultyLevel: 'Intermediate',
-              aiGenerated: const Value(true),
-            ),
-          );
+          final workoutId = await _db
+              .into(_db.workouts)
+              .insert(
+                WorkoutsCompanion.insert(
+                  title: "AI Plan: $userPrompt",
+                  difficultyLevel: 'Intermediate',
+                  aiGenerated: const Value(true),
+                ),
+              );
 
           for (var i = 0; i < decoded.length; i++) {
             final item = decoded[i];
 
-            final exId = await _db.into(_db.exercises).insertOnConflictUpdate(
-              ExercisesCompanion.insert(
-                name: item['exercise_name'],
-                muscleGroup: item['muscle_group'],
-              ),
-            );
+            // Parse optional image URL safely
+            String? parsedImageUrl = item['image_url'] as String?;
+            if (parsedImageUrl != null && parsedImageUrl.trim().isEmpty) {
+              parsedImageUrl = null;
+            }
 
-            await _db.into(_db.workoutExercises).insert(
-              WorkoutExercisesCompanion.insert(
-                workoutId: workoutId,
-                exerciseId: exId,
-                orderIndex: i,
-                targetSets: item['target_sets'],
-                targetReps: item['target_reps'],
-              ),
-            );
+            // FIX: Use standard constructor instead of .insert to bypass the 'id' quirk,
+            // and explicitly cast the JSON dynamic values to Strings/Ints.
+            final exId = await _db
+                .into(_db.exercises)
+                .insertOnConflictUpdate(
+                  ExercisesCompanion(
+                    name: Value(item['exercise_name'] as String),
+                    muscleGroup: Value(item['muscle_group'] as String),
+                    imageUrl: Value(parsedImageUrl),
+                  ),
+                );
+
+            await _db
+                .into(_db.workoutExercises)
+                .insert(
+                  WorkoutExercisesCompanion.insert(
+                    // The clean insert is back!
+                    workoutId: workoutId,
+                    exerciseId: exId,
+                    orderIndex: i,
+                    targetSets: item['target_sets'] as int,
+                    targetReps: Value(item['target_reps'] as int?),
+                    targetDurationSeconds: const Value(null),
+                    restSecondsAfterSet:
+                        (item['rest_seconds_set'] as int?) ?? 60,
+                    restSecondsAfterExercise:
+                        (item['rest_seconds_exercise'] as int?) ?? 90,
+                  ),
+                );
           }
         });
       } catch (e) {
-        throw Exception("Failed to parse or save AI workout: $e\nAI Response was: ${response.text}");
+        throw Exception(
+          "Failed to parse or save AI workout: $e\nAI Response was: ${response.text}",
+        );
       }
     }
   }
 }
 
 final List<Tool> workoutTools = [
-  Tool(functionDeclarations: [
-    FunctionDeclaration(
-      'fetchExerciseLibrary',
-      'Returns a list of all exercises available in the local database.',
-      Schema(SchemaType.object, properties: {}),
-    ),
-    FunctionDeclaration(
-      'fetchUserStats',
-      'Returns historical performance for a specific exercise.',
-      Schema(SchemaType.object, properties: {
-        'exerciseName': Schema(SchemaType.string, description: 'The name of the exercise to check history for'),
-      }),
-    ),
-  ])
+  Tool(
+    functionDeclarations: [
+      FunctionDeclaration(
+        'fetchExerciseLibrary',
+        'Returns a list of all exercises available in the local database.',
+        Schema(SchemaType.object, properties: {}),
+      ),
+      FunctionDeclaration(
+        'fetchUserStats',
+        'Returns historical performance for a specific exercise.',
+        Schema(
+          SchemaType.object,
+          properties: {
+            'exerciseName': Schema(
+              SchemaType.string,
+              description: 'The name of the exercise to check history for',
+            ),
+          },
+        ),
+      ),
+    ],
+  ),
 ];

@@ -13,6 +13,10 @@ class Exercises extends Table {
   TextColumn get muscleGroup => text()();
   TextColumn get instructionUrl => text().nullable()();
   BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
+  TextColumn get imageUrl =>
+      text().nullable()(); // For AI/Internet fetched images
+  TextColumn get localImagePath =>
+      text().nullable()(); // For user-selected gallery images
 }
 
 // 2. Workouts Table: Metadata for training sessions [cite: 17]
@@ -26,11 +30,24 @@ class Workouts extends Table {
 
 // 3. WorkoutExercises: Junction table for the many-to-many relationship
 class WorkoutExercises extends Table {
-  IntColumn get workoutId => integer().references(Workouts, #id, onDelete: KeyAction.cascade)();
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get workoutId =>
+      integer().references(Workouts, #id, onDelete: KeyAction.cascade)();
   IntColumn get exerciseId => integer().references(Exercises, #id)();
   IntColumn get orderIndex => integer()();
+
+  // Reps can now be nullable if it's a duration-based exercise
   IntColumn get targetSets => integer()();
-  IntColumn get targetReps => integer()();
+  IntColumn get targetReps => integer().nullable()();
+
+  // NEW: Support for timed exercises (e.g. 30 seconds of jumping jacks)
+  IntColumn get targetDurationSeconds => integer().nullable()();
+
+  IntColumn get restSecondsAfterSet => integer()();
+  IntColumn get restSecondsAfterExercise => integer()();
+
+  // @override
+  // Set<Column> get primaryKey => {workoutId, exerciseId, orderIndex};
 }
 
 // 4. WorkoutLogs: Historical records of completed sessions [cite: 17]
@@ -42,7 +59,34 @@ class WorkoutLogs extends Table {
   IntColumn get durationMinutes => integer()();
 }
 
-@DriftDatabase(tables: [Exercises, Workouts, WorkoutExercises, WorkoutLogs])
+// 5. ExerciseLogs: Granular tracking of individual sets performed
+class ExerciseLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  // Links this specific set to the overall workout session.
+  // Cascade delete ensures if the user deletes the workout record, the set records vanish too.
+  IntColumn get workoutLogId =>
+      integer().references(WorkoutLogs, #id, onDelete: KeyAction.cascade)();
+
+  // Links to the global exercise dictionary (e.g., "Bench Press")
+  IntColumn get exerciseId => integer().references(Exercises, #id)();
+
+  // The actual execution metrics
+  IntColumn get setIndex => integer()(); // 1st set, 2nd set, etc.
+  RealColumn get weight =>
+      real()(); // Real column to support decimals like 12.5 kg
+  IntColumn get reps => integer()();
+
+  // Future-proofing fields
+  IntColumn get rpe =>
+      integer().nullable()(); // Rate of Perceived Exertion (1-10 scale)
+  TextColumn get notes =>
+      text().nullable()(); // E.g., "Felt a pinch in shoulder"
+}
+
+@DriftDatabase(
+  tables: [Exercises, Workouts, WorkoutExercises, WorkoutLogs, ExerciseLogs],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -51,22 +95,72 @@ class AppDatabase extends _$AppDatabase {
 
   // AI Tool Call Helper: Fetch historical stats for a specific exercise [cite: 32, 33]
   // Change OrderMode.desc to OrderingMode.desc
-  Future<List<WorkoutLog>> getLogsForExercise(int exerciseId) {
+  // Future<List<WorkoutLog>> getLogsForExercise(int exerciseId) {
+  //   return (select(workoutLogs)
+  //         ..where((tbl) => tbl.workoutId.equals(exerciseId))
+  //         ..orderBy([
+  //           (t) =>
+  //               OrderingTerm(expression: t.executedAt, mode: OrderingMode.desc),
+  //         ]))
+  //       .get();
+  // }
+
+  // Fetches the set-by-set history for a specific exercise (e.g., to plot a Bench Press progress chart)
+  Future<List<ExerciseLog>> getHistoryForExercise(int targetExerciseId) {
+    return (select(exerciseLogs)
+          ..where((tbl) => tbl.exerciseId.equals(targetExerciseId))
+          // We can't order by date directly here since date is in WorkoutLogs.
+          // For now, ordering by the log ID inherently sorts them chronologically.
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.id, mode: OrderingMode.desc),
+          ]))
+        .get();
+  }
+
+  // Fetches the historical completion logs for a specific Workout
+  Future<List<WorkoutLog>> getLogsForWorkout(int workoutId) {
     return (select(workoutLogs)
-      ..where((tbl) => tbl.workoutId.equals(exerciseId))
-      ..orderBy([
-            (t) => OrderingTerm(expression: t.executedAt, mode: OrderingMode.desc)
-      ]))
+          ..where((tbl) => tbl.workoutId.equals(workoutId))
+          ..orderBy([
+            (t) =>
+                OrderingTerm(expression: t.executedAt, mode: OrderingMode.desc),
+          ]))
         .get();
   }
 
   // Fetches exercises for a specific workout, ordered by their sequence
   Future<List<TypedResult>> getWorkoutDetails(int workoutId) {
     return (select(workoutExercises).join([
-      innerJoin(exercises, exercises.id.equalsExp(workoutExercises.exerciseId))
-    ])
-      ..where(workoutExercises.workoutId.equals(workoutId))
-      ..orderBy([OrderingTerm(expression: workoutExercises.orderIndex, mode: OrderingMode.asc)])).get();
+            innerJoin(
+              exercises,
+              exercises.id.equalsExp(workoutExercises.exerciseId),
+            ),
+          ])
+          ..where(workoutExercises.workoutId.equals(workoutId))
+          ..orderBy([
+            OrderingTerm(
+              expression: workoutExercises.orderIndex,
+              mode: OrderingMode.asc,
+            ),
+          ]))
+        .get();
+  }
+
+  Stream<List<TypedResult>> getWorkoutDetailsStream(int workoutId) {
+    return (select(workoutExercises).join([
+            innerJoin(
+              exercises,
+              exercises.id.equalsExp(workoutExercises.exerciseId),
+            ),
+          ])
+          ..where(workoutExercises.workoutId.equals(workoutId))
+          ..orderBy([OrderingTerm.asc(workoutExercises.orderIndex)]))
+        .watch();
+  }
+
+  // Deletes a workout and all its linked junction records automatically
+  Future<void> deleteWorkout(int workoutId) {
+    return (delete(workouts)..where((t) => t.id.equals(workoutId))).go();
   }
 }
 

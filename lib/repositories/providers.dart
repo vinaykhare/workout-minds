@@ -30,11 +30,24 @@ final aiRepositoryProvider = Provider<AIWorkoutRepository>((ref) {
 });
 
 // Fetches the joined exercise details for a given workout ID
-final workoutDetailsProvider = FutureProvider.family<List<TypedResult>, int>((ref, workoutId) {
+final workoutDetailsProvider = StreamProvider.family<List<TypedResult>, int>((
+  ref,
+  workoutId,
+) {
+  return ref.watch(databaseProvider).getWorkoutDetailsStream(workoutId);
+});
+
+// FIX: Using .watch() turns this into a live stream.
+// Any insert, update, or delete in the DB will instantly redraw the Dashboard.
+final workoutsStreamProvider = StreamProvider<List<Workout>>((ref) {
   final db = ref.watch(databaseProvider);
-  return db.getWorkoutDetails(workoutId);
+  return (db.select(
+    db.workouts,
+  )..orderBy([(t) => OrderingTerm.desc(t.id)])).watch();
 });
 
 final audioHandlerProvider = Provider<WorkoutAudioHandler>((ref) {
-  throw UnimplementedError('audioHandlerProvider must be overridden in main.dart');
+  throw UnimplementedError(
+    'audioHandlerProvider must be overridden in main.dart',
+  );
 });

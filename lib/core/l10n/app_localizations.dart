@@ -108,7 +108,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Error: {message}'**
-  String errorPrefix(String message);
+  String errorPrefix(Object message);
 
   /// No description provided for @aiGenerate.
   ///
@@ -179,20 +179,26 @@ abstract class AppLocalizations {
   /// No description provided for @nextUp.
   ///
   /// In en, this message translates to:
-  /// **'Next up: {name}. Set {set} of {total}. Target is {reps} reps.'**
-  String nextUp(Object name, Object reps, Object set, Object total);
+  /// **'Next up: {name}. Set {setNum} of {total}. Target is {reps} reps.'**
+  String nextUp(Object name, Object reps, Object setNum, Object total);
 
   /// No description provided for @setCompleteRest.
   ///
   /// In en, this message translates to:
-  /// **'Set complete. Rest for 60 seconds.'**
-  String get setCompleteRest;
+  /// **'Set complete. Rest for {seconds} seconds.'**
+  String setCompleteRest(Object seconds);
+
+  /// No description provided for @exerciseCompleteRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise complete. Rest for {seconds} seconds.'**
+  String exerciseCompleteRest(Object seconds);
 
   /// No description provided for @restOver.
   ///
   /// In en, this message translates to:
-  /// **'Rest is over. Get ready for set {set}.'**
-  String restOver(Object set);
+  /// **'Rest is over. Let\'s start set {setNum}!'**
+  String restOver(Object setNum);
 
   /// No description provided for @finishSet.
   ///
