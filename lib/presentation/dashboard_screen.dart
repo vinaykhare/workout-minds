@@ -305,7 +305,7 @@ Future<void> _startWorkoutDirectly(
   WidgetRef ref,
   int workoutId,
 ) async {
-  final l10n = AppLocalizations.of(context)!;
+  // final l10n = AppLocalizations.of(context)!;
   final db = ref.read(databaseProvider);
 
   final rows = await db.getWorkoutDetails(workoutId);
@@ -328,7 +328,13 @@ Future<void> _startWorkoutDirectly(
   }).toList();
 
   final handler = ref.read(audioHandlerProvider);
-  handler.startWorkoutSequence(routine, l10n); // Removed await
+  // Pass the title (fetch it from the DB first if you only have workoutId)
+  final workout = await (db.select(
+    db.workouts,
+  )..where((t) => t.id.equals(workoutId))).getSingle();
+  handler.startWorkoutSequence(routine, workout.title);
+
+  if (!context.mounted) return;
 
   Navigator.push(
     context,

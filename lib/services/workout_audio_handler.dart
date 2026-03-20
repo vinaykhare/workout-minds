@@ -1,235 +1,188 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:workout_minds/core/l10n/app_localizations.dart';
+// import '../core/l10n/app_localizations.dart';
 
 class WorkoutAudioHandler extends BaseAudioHandler {
-  bool _isWorkoutActive = false;
-  final FlutterTts _tts = FlutterTts();
-  final StreamController<bool> _workoutCompleteController =
-      StreamController<bool>.broadcast();
-  Stream<bool> get workoutCompleteStream => _workoutCompleteController.stream;
-
+  final FlutterTts flutterTts = FlutterTts();
   List<Map<String, dynamic>> _routine = [];
+  // AppLocalizations? _l10n;
+
   int _currentIndex = 0;
   int _currentSet = 1;
+  String _workoutTitle = "";
 
-  AppLocalizations? _l10n;
+  bool _isWorkoutActive = false;
+  bool _isProcessingAction = false; // The Double-Tap Lock
 
-  // Timer state for the UI
-  Timer? _restTimer;
-  int _currentRestSeconds = 0;
-  final _restStreamController = StreamController<int>.broadcast();
-  Stream<int> get restStream => _restStreamController.stream;
+  String _currentScreenState =
+      'intro'; // 'intro', 'exercise_rep', 'exercise_time', 'rest', 'outro'
+  int _currentTimerSeconds = 0;
+  Timer? _stateTimer;
 
   WorkoutAudioHandler() {
-    playbackState.add(
-      playbackState.value.copyWith(
-        controls: [MediaControl.play, MediaControl.stop],
-        processingState: AudioProcessingState.ready,
-        playing: false,
-      ),
-    );
-    mediaItem.add(
-      const MediaItem(
-        id: 'workout_idle',
-        title: 'Workout Minds',
-        artist: 'Ready to train',
-      ),
-    );
+    flutterTts.setLanguage("en-US");
+    flutterTts.setSpeechRate(0.5);
   }
 
-  Future<void> _configureTts(String localeName) async {
-    final ttsLanguage = localeName == 'hi' ? "hi-IN" : "en-IN";
-    await _tts.setLanguage(ttsLanguage);
-    await _tts.setSpeechRate(0.5);
-    await _tts.setVolume(1.0);
-    await _tts.setPitch(1.0);
-
-    // CRITICAL FIX: Forces the engine to finish the current sentence
-    // before allowing the code to proceed to the next await announce()
-    await _tts.awaitSpeakCompletion(true);
-  }
-
-  // NEW: A smart announce method that interrupts old speech
-  Future<void> announce(String text) async {
-    if (!_isWorkoutActive) return;
-    await _tts.stop(); // Instantly kills whatever is currently talking
-    await _tts.speak(text);
-  }
+  // --- 1. CORE STATE MANAGEMENT ---
 
   Future<void> startWorkoutSequence(
     List<Map<String, dynamic>> routine,
-    AppLocalizations l10n,
+    // AppLocalizations l10n,
+    String workoutTitle,
   ) async {
     _routine = routine;
-    _l10n = l10n;
+    // _l10n = l10n;
+    _workoutTitle = workoutTitle;
     _currentIndex = 0;
     _currentSet = 1;
-    _isWorkoutActive = true; // Mark as active!
+    _isWorkoutActive = true;
+    _isProcessingAction = false;
 
-    // Instantly push the first exercise to the UI so the screen isn't waiting
-    if (_routine.isNotEmpty) {
-      _updateUiStream(_routine.first);
-    }
+    // Phase 1: INTRO
+    _currentScreenState = 'intro';
+    _pushStateToUi();
 
-    // Speech 1
-    await announce("Workout started. Let's crush it!");
+    await flutterTts.stop();
+    await flutterTts.speak("Workout Started. Let's crush it!");
 
-    // CRITICAL CHECK: Did the user hit "Stop" or "Finish Set" while I was talking?
-    // If they quit, OR if they advanced the set/index, ABORT Speech 2!
-    if (!_isWorkoutActive || _currentIndex > 0 || _currentSet > 1) return;
-
-    // Speech 2
-    await _announceCurrentExercise();
-  }
-
-  Future<void> _announceCurrentExercise() async {
-    if (_l10n == null) return;
-
-    if (_currentIndex >= _routine.length) {
-      await announce(_l10n!.workoutComplete);
-      await stop();
-      return;
-    }
-
-    final ex = _routine[_currentIndex];
-
-    // FIX 1: Update the UI stream BEFORE the TTS speaks so the screen is instantly correct
-    mediaItem.add(
-      MediaItem(
-        id: 'active_ex',
-        title: ex['name'].toString(),
-        artist: 'Set $_currentSet of ${ex['sets']}',
-        extras: {
-          'reps': ex['reps'].toString(),
-          'durationSeconds': ex['durationSeconds'], // NEW
-          'imageUrl': ex['imageUrl'], // NEW
-          'localImagePath': ex['localImagePath'], // NEW
-        },
-      ),
-    );
-
-    final msg = _l10n!.nextUp(
-      ex['name'].toString(),
-      ex['reps'].toString(),
-      _currentSet.toString(),
-      ex['sets'].toString(),
-    );
-
-    // FIX 2: Now the code waits for the speech, but the UI is already updated!
-    await announce(msg);
-  }
-
-  Future<void> completeSet() async {
-    if (!_isWorkoutActive || _currentIndex >= _routine.length || _l10n == null)
-      return;
-
-    await flutterTts
-        .stop(); // Instantly kill Speech 1 or 2 if it's currently rambling
-
-    final ex = _routine[_currentIndex];
-    final isLastSet = _currentSet >= (ex['sets'] as int);
-    final isLastExercise = _currentIndex == _routine.length - 1;
-
-    if (!isLastSet) {
-      _currentSet++;
-      _currentRestSeconds = ex['restSecondsSet'] as int;
-      await announce(_l10n!.setCompleteRest(_currentRestSeconds.toString()));
-      if (!_isWorkoutActive) return; // Ghost check
-      _startCountdown(ex);
-    } else if (!isLastExercise) {
-      _currentIndex++;
-      _currentSet = 1;
-      final nextEx = _routine[_currentIndex];
-      _currentRestSeconds = ex['restSecondsExercise'] as int;
-
-      await announce(
-        _l10n!.exerciseCompleteRest(_currentRestSeconds.toString()),
-      );
-      if (!_isWorkoutActive) return; // Ghost check
-      _startCountdown(nextEx);
-    } else {
-      _currentIndex++;
-      // Assuming you have a translation string for Workout Complete
-      await announce("Workout complete! Great job.");
-      _workoutCompleteController.add(true);
-      await stop();
-    }
-  }
-
-  // Extracted the timer logic to keep things clean
-  void _startCountdown(Map<String, dynamic> upcomingEx) {
-    if (_currentRestSeconds <= 0) {
-      announce(_l10n!.restOver(_currentSet.toString()));
-      _updateUiStream(upcomingEx);
-      return;
-    }
-
-    _restStreamController.add(_currentRestSeconds);
-    _restTimer?.cancel();
-
-    _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // Ghost check inside the timer loop
-      if (!_isWorkoutActive) {
-        timer.cancel();
-        return;
-      }
-
-      if (_currentRestSeconds > 0) {
-        _currentRestSeconds--;
-        _restStreamController.add(_currentRestSeconds);
-      } else {
-        timer.cancel();
-        announce(_l10n!.restOver(_currentSet.toString()));
-        _updateUiStream(upcomingEx);
+    // Wait for the intro speech to finish (approx 3 seconds), then auto-advance if not interrupted
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_isWorkoutActive && _currentScreenState == 'intro') {
+        _startExercisePhase();
       }
     });
   }
 
-  void _updateUiStream(Map<String, dynamic> ex) {
+  Future<void> _startExercisePhase() async {
+    if (!_isWorkoutActive || _currentIndex >= _routine.length) return;
+    final ex = _routine[_currentIndex];
+
+    await flutterTts.stop();
+
+    if (ex['durationSeconds'] != null) {
+      _currentScreenState = 'exercise_time';
+      _currentTimerSeconds = ex['durationSeconds'] as int;
+      _pushStateToUi();
+      await flutterTts.speak(
+        "Next up: ${ex['name']}, for $_currentTimerSeconds seconds.",
+      );
+      _startCountdownTimer();
+    } else {
+      _currentScreenState = 'exercise_rep';
+      _pushStateToUi();
+      await flutterTts.speak("Next up: ${ex['name']}, ${ex['reps']} reps.");
+    }
+  }
+
+  // --- 2. THE ADVANCE SEQUENCE (Replaces completeSet) ---
+
+  // This is called when the user hits "Finish Set", "Skip Rest", or a timer hits 0.
+  Future<void> advanceSequence() async {
+    if (_isProcessingAction || !_isWorkoutActive) {
+      return; // Prevent Double-Taps!
+    }
+    _isProcessingAction = true;
+
+    _stateTimer?.cancel();
+    await flutterTts.stop(); // Instantly kill current speech
+
+    if (_currentScreenState == 'exercise_rep' ||
+        _currentScreenState == 'exercise_time') {
+      final ex = _routine[_currentIndex];
+      final isLastSet = _currentSet >= (ex['sets'] as int);
+      final isLastExercise = _currentIndex == _routine.length - 1;
+
+      if (!isLastSet) {
+        // Go to Rest (Between Sets)
+        _currentSet++;
+        _currentScreenState = 'rest';
+        _currentTimerSeconds = ex['restSecondsSet'] as int;
+        _pushStateToUi();
+        await flutterTts.speak("Rest for $_currentTimerSeconds seconds.");
+        _startCountdownTimer();
+      } else if (!isLastExercise) {
+        // Go to Rest (Between Exercises)
+        _currentSet = 1;
+        _currentIndex++;
+        _currentScreenState = 'rest';
+        _currentTimerSeconds = ex['restSecondsExercise'] as int;
+        _pushStateToUi();
+        await flutterTts.speak(
+          "Exercise complete. Rest for $_currentTimerSeconds seconds.",
+        );
+        _startCountdownTimer();
+      } else {
+        // Go to Outro
+        _currentScreenState = 'outro';
+        _pushStateToUi();
+        await flutterTts.speak("Workout Complete! Great job.");
+      }
+    } else if (_currentScreenState == 'rest') {
+      // Rest is over, start the next exercise phase
+      await _startExercisePhase();
+    }
+
+    // Unlock the button
+    Future.delayed(
+      const Duration(milliseconds: 500),
+      () => _isProcessingAction = false,
+    );
+  }
+
+  // --- 3. TIMERS & UI UPDATES ---
+
+  void _startCountdownTimer() {
+    _stateTimer?.cancel();
+    _stateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!_isWorkoutActive) {
+        timer.cancel();
+        return;
+      }
+      if (_currentTimerSeconds > 0) {
+        _currentTimerSeconds--;
+        _pushStateToUi(); // Update the clock on screen
+      } else {
+        timer.cancel();
+        advanceSequence(); // Auto-advance when time is up
+      }
+    });
+  }
+
+  void _pushStateToUi() {
+    if (!_isWorkoutActive) return;
+
+    final ex = _currentIndex < _routine.length ? _routine[_currentIndex] : null;
+
     mediaItem.add(
       MediaItem(
-        id: 'active_ex',
-        title: ex['name'].toString(),
-        artist: 'Set $_currentSet of ${ex['sets']}',
+        id: 'active_workout',
+        title: _workoutTitle,
+        artist: ex != null ? 'Set $_currentSet of ${ex['sets']}' : '',
         extras: {
-          'reps': ex['reps'].toString(),
-          'durationSeconds': ex['durationSeconds'], // NEW
-          'imageUrl': ex['imageUrl'],
-          'localImagePath': ex['localImagePath'],
+          'stateType':
+              _currentScreenState, // 'intro', 'exercise_rep', 'exercise_time', 'rest', 'outro'
+          'exName': ex?['name'],
+          'reps': ex?['reps']?.toString(),
+          'timerValue': _currentTimerSeconds,
+          'imageUrl': ex?['imageUrl'],
+          'localImagePath': ex?['localImagePath'],
+          // Data for the Status Modal
+          'totalExercises': _routine.length,
+          'currentExerciseIndex': _currentIndex + 1,
+          'totalSets': ex?['sets'],
+          'currentSet': _currentSet,
         },
       ),
     );
   }
 
   @override
-  Future<void> play() async {
-    playbackState.add(
-      playbackState.value.copyWith(
-        controls: [MediaControl.pause, MediaControl.stop],
-        playing: true,
-      ),
-    );
-    if (_l10n != null) await announce(_l10n!.workoutStarted);
-  }
-
-  @override
-  Future<void> pause() async {
-    playbackState.add(
-      playbackState.value.copyWith(
-        controls: [MediaControl.play, MediaControl.stop],
-        playing: false,
-      ),
-    );
-    if (_l10n != null) await announce(_l10n!.workoutPaused);
-  }
-
-  @override
   Future<void> stop() async {
-    _isWorkoutActive = false; // 1. Flag the workout as dead
-    _restTimer?.cancel(); // 2. Kill the timers
-    await _tts.stop(); // 3. Kill the voice instantly
+    _isWorkoutActive = false;
+    _stateTimer?.cancel();
+    await flutterTts.stop();
     return super.stop();
   }
 }

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:workout_minds/core/l10n/app_localizations.dart';
+// import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'active_workout_screen.dart';
@@ -23,7 +23,7 @@ class WorkoutDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailsAsync = ref.watch(workoutDetailsProvider(workout.id));
-    final l10n = AppLocalizations.of(context)!;
+    // final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(title: Text(workout.title)),
@@ -184,7 +184,8 @@ class WorkoutDetailScreen extends ConsumerWidget {
           final handler = ref.read(audioHandlerProvider);
 
           // Fire the audio and immediately push the screen without awaiting!
-          handler.startWorkoutSequence(routine, l10n);
+          // You already have access to `workout.title` here!
+          handler.startWorkoutSequence(routine, workout.title);
           Navigator.push(
             context,
             MaterialPageRoute(
