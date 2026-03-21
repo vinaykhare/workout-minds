@@ -85,6 +85,13 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         ref.invalidate(weeklyStatsProvider);
       }
     });
+
+    // FIX 2: Listen for the notification "Stop" button!
+    handler.workoutAbortedStream.listen((_) {
+      if (mounted) {
+        Navigator.pop(context); // Closes the active workout screen
+      }
+    });
   }
 
   @override
@@ -264,24 +271,62 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                           _targetBadge('Time Left: $timerValue s', context),
 
                         const SizedBox(height: 32),
-                        FilledButton.icon(
-                          onPressed: _isButtonLocked
-                              ? null
-                              : () => _handleAdvance(handler),
-                          icon: Icon(
-                            stateType == 'exercise_rep'
-                                ? Icons.check_circle
-                                : Icons.skip_next,
+
+                        // FIX 5: Dynamic UI Play/Pause button syncing with the notification
+                        if (stateType == 'exercise_time')
+                          StreamBuilder<PlaybackState>(
+                            stream: handler.playbackState,
+                            builder: (context, pbSnapshot) {
+                              final isPlaying =
+                                  pbSnapshot.data?.playing ?? true;
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: FilledButton.tonalIcon(
+                                      onPressed: () => isPlaying
+                                          ? handler.pause()
+                                          : handler.play(),
+                                      icon: Icon(
+                                        isPlaying
+                                            ? Icons.pause
+                                            : Icons.play_arrow,
+                                      ),
+                                      label: Text(
+                                        isPlaying ? 'Pause' : 'Resume',
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.all(16),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: FilledButton.icon(
+                                      onPressed: _isButtonLocked
+                                          ? null
+                                          : () => _handleAdvance(handler),
+                                      icon: const Icon(Icons.skip_next),
+                                      label: const Text('Skip Time'),
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.all(16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )
+                        else
+                          FilledButton.icon(
+                            onPressed: _isButtonLocked
+                                ? null
+                                : () => _handleAdvance(handler),
+                            icon: const Icon(Icons.check_circle),
+                            label: const Text('Finish Set'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.all(16),
+                            ),
                           ),
-                          label: Text(
-                            stateType == 'exercise_rep'
-                                ? 'Finish Set'
-                                : 'Skip Remaining Time',
-                          ),
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
-                          ),
-                        ),
                       ],
 
                       // --- 3. REST SCREEN ---
@@ -308,22 +353,53 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                           ),
                         ),
                         const Spacer(),
-                        OutlinedButton.icon(
-                          onPressed: _isButtonLocked
-                              ? null
-                              : () => _handleAdvance(handler),
-                          icon: const Icon(
-                            Icons.fast_forward,
-                            color: Colors.white,
-                          ),
-                          label: const Text(
-                            'Skip Rest',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white),
-                            padding: const EdgeInsets.all(16),
-                          ),
+                        StreamBuilder<PlaybackState>(
+                          stream: handler.playbackState,
+                          builder: (context, pbSnapshot) {
+                            final isPlaying = pbSnapshot.data?.playing ?? true;
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => isPlaying
+                                        ? handler.pause()
+                                        : handler.play(),
+                                    icon: Icon(
+                                      isPlaying
+                                          ? Icons.pause
+                                          : Icons.play_arrow,
+                                      color: Colors.white,
+                                    ),
+                                    label: Text(
+                                      isPlaying ? 'Pause' : 'Resume',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Colors.white,
+                                      ),
+                                      padding: const EdgeInsets.all(16),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: _isButtonLocked
+                                        ? null
+                                        : () => _handleAdvance(handler),
+                                    icon: const Icon(Icons.fast_forward),
+                                    label: const Text('Skip Rest'),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.all(16),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
 
@@ -364,9 +440,10 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                 'Go Home / Dashboard',
                                 style: TextStyle(color: Colors.white),
                               ),
-                              onPressed: () {
-                                handler.stop();
-                                Navigator.pop(context);
+                              onPressed: () async {
+                                // FIX: Removed Navigator.pop(context)!
+                                // Calling stop() fires the stream, which safely pops the screen exactly once.
+                                await handler.stop();
                               },
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: Colors.white),
@@ -378,6 +455,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                       ],
 
                       // GLOBAL ABORT BUTTON
+                      // GLOBAL ABORT BUTTON (Hidden on Outro)
                       if (stateType != 'outro') ...[
                         const SizedBox(height: 16),
                         TextButton.icon(
@@ -393,8 +471,9 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                             ),
                           ),
                           onPressed: () async {
+                            // FIX: Removed the duplicate Navigator.pop(context)!
+                            // The stream listener at the top of the file handles closing the screen securely.
                             await handler.stop();
-                            if (context.mounted) Navigator.pop(context);
                           },
                         ),
                       ],

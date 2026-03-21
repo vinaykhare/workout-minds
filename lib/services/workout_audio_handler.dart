@@ -1,31 +1,30 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-// import '../core/l10n/app_localizations.dart';
 
 class WorkoutAudioHandler extends BaseAudioHandler {
+  final StreamController<bool> _workoutAbortedController =
+      StreamController<bool>.broadcast();
+  Stream<bool> get workoutAbortedStream => _workoutAbortedController.stream;
+
   final FlutterTts flutterTts = FlutterTts();
   List<Map<String, dynamic>> _routine = [];
-  // AppLocalizations? _l10n;
 
   int _currentIndex = 0;
   int _currentSet = 1;
   String _workoutTitle = "";
-  // int _currentWorkoutId;
 
   bool _isWorkoutActive = false;
-  bool _isProcessingAction = false; // The Double-Tap Lock
-  // --- ADD THESE MISSING VARIABLES ---
+  bool _isProcessingAction = false;
   int? currentWorkoutId;
   final StreamController<bool> _workoutCompleteController =
       StreamController<bool>.broadcast();
   Stream<bool> get workoutCompleteStream => _workoutCompleteController.stream;
 
-  String _currentScreenState =
-      'intro'; // 'intro', 'exercise_rep', 'exercise_time', 'rest', 'outro'
+  String _currentScreenState = 'intro';
   int _currentTimerSeconds = 0;
   Timer? _stateTimer;
-  Timer? _introTimer; // Dedicated timer for the intro
+  Timer? _introTimer;
 
   WorkoutAudioHandler() {
     flutterTts.setLanguage("en-US");
@@ -36,18 +35,21 @@ class WorkoutAudioHandler extends BaseAudioHandler {
 
   Future<void> startWorkoutSequence(
     List<Map<String, dynamic>> routine,
-    // AppLocalizations l10n,
     String workoutTitle,
     int workoutId,
   ) async {
+    // Prevent parallel workouts! Kill any active workout before starting a new one.
+    if (_isWorkoutActive) {
+      await stop();
+    }
     currentWorkoutId = workoutId;
     _routine = routine;
-    // _l10n = l10n;
     _workoutTitle = workoutTitle;
     _currentIndex = 0;
     _currentSet = 1;
     _isWorkoutActive = true;
     _isProcessingAction = false;
+    _isPaused = false; // Reset pause state
 
     // Phase 1: INTRO
     _currentScreenState = 'intro';
@@ -56,7 +58,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     await flutterTts.stop();
     await flutterTts.speak("Workout Started. Let's crush it!");
 
-    // Wait for the intro speech to finish (approx 3 seconds), then auto-advance if not interrupted
     _introTimer?.cancel();
     _introTimer = Timer(const Duration(seconds: 3), () {
       if (_isWorkoutActive && _currentScreenState == 'intro') {
@@ -71,7 +72,7 @@ class WorkoutAudioHandler extends BaseAudioHandler {
 
     await flutterTts.stop();
 
-    if (ex['durationSeconds'] != null) {
+    if (ex['durationSeconds'] != null && (ex['durationSeconds'] as int) > 0) {
       _currentScreenState = 'exercise_time';
       _currentTimerSeconds = ex['durationSeconds'] as int;
       _pushStateToUi();
@@ -86,18 +87,17 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     }
   }
 
-  // --- 2. THE ADVANCE SEQUENCE (Replaces completeSet) ---
+  // --- 2. THE ADVANCE SEQUENCE ---
 
-  // This is called when the user hits "Finish Set", "Skip Rest", or a timer hits 0.
   Future<void> advanceSequence() async {
-    if (_isProcessingAction || !_isWorkoutActive) {
-      return; // Prevent Double-Taps!
-    }
+    if (_isProcessingAction || !_isWorkoutActive) return;
     _isProcessingAction = true;
+    _isPaused = false;
 
     _stateTimer?.cancel();
-    await flutterTts.stop(); // Instantly kill current speech
+    await flutterTts.stop();
 
+    // Find out if we are at the end of the workout BEFORE we increment indexes
     if (_currentScreenState == 'exercise_rep' ||
         _currentScreenState == 'exercise_time') {
       final ex = _routine[_currentIndex];
@@ -105,7 +105,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       final isLastExercise = _currentIndex == _routine.length - 1;
 
       if (!isLastSet) {
-        // Go to Rest (Between Sets)
         _currentSet++;
         _currentScreenState = 'rest';
         _currentTimerSeconds = ex['restSecondsSet'] as int;
@@ -113,7 +112,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         await flutterTts.speak("Rest for $_currentTimerSeconds seconds.");
         _startCountdownTimer();
       } else if (!isLastExercise) {
-        // Go to Rest (Between Exercises)
         _currentSet = 1;
         _currentIndex++;
         _currentScreenState = 'rest';
@@ -124,19 +122,15 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         );
         _startCountdownTimer();
       } else {
-        // Go to Outro
         _currentScreenState = 'outro';
         _pushStateToUi();
         await flutterTts.speak("Workout Complete! Great job.");
-        // NEW: Tell a listener to log this! We'll use your existing stream.
         _workoutCompleteController.add(true);
       }
     } else if (_currentScreenState == 'rest') {
-      // Rest is over, start the next exercise phase
       await _startExercisePhase();
     }
 
-    // Unlock the button
     Future.delayed(
       const Duration(milliseconds: 500),
       () => _isProcessingAction = false,
@@ -148,75 +142,155 @@ class WorkoutAudioHandler extends BaseAudioHandler {
   void _startCountdownTimer() {
     _stateTimer?.cancel();
     _stateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // FIX: This must be inside the loop to freeze the clock when paused!
+      if (_isPaused) return;
+
       if (!_isWorkoutActive) {
         timer.cancel();
         return;
       }
       if (_currentTimerSeconds > 0) {
         _currentTimerSeconds--;
-        _pushStateToUi(); // Update the clock on screen
+        _pushStateToUi();
       } else {
         timer.cancel();
-        advanceSequence(); // Auto-advance when time is up
+        advanceSequence();
       }
     });
   }
 
-  void _pushStateToUi() {
-    if (!_isWorkoutActive) return;
+  bool _isPaused = false;
 
-    final ex = _currentIndex < _routine.length ? _routine[_currentIndex] : null;
+  void _updatePlaybackState(bool isPlaying) {
+    if (_currentScreenState == 'outro') {
+      playbackState.add(
+        playbackState.value.copyWith(
+          processingState: AudioProcessingState.idle,
+          playing: false,
+          controls: [],
+        ),
+      );
+      return;
+    }
+
+    // FIX: Android 13 forces a center button. For Rep exercises, we force it
+    // to look like it's "playing" so it doesn't look stalled.
+    final forcePlaying = _currentScreenState == 'exercise_rep'
+        ? true
+        : isPlaying;
+
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: [
+          forcePlaying ? MediaControl.pause : MediaControl.play, // Index 0
+          MediaControl.skipToNext, // Index 1
+          MediaControl.stop, // Index 2
+        ],
+        systemActions: const {MediaAction.seek},
+        androidCompactActionIndices: const [],
+        processingState: AudioProcessingState.ready,
+        playing: forcePlaying,
+      ),
+    );
+  }
+
+  void _pushStateToUi() {
+    if (_routine.isEmpty) return;
+
+    final safeIndex = _currentIndex < _routine.length
+        ? _currentIndex
+        : _routine.length - 1;
+    final ex = _routine[safeIndex];
+
+    final exName = ex['name'] as String;
+    final localPath = ex['localImagePath'] as String?;
+
+    // FIX 1: Change what the notification says based on the screen!
+    String displayTitle = exName;
+    String displaySubtitle = 'Set $_currentSet of ${ex['sets']}';
+
+    if (_currentScreenState == 'rest') {
+      displayTitle = 'Resting';
+      displaySubtitle = 'Next up: $exName';
+    } else if (_currentScreenState == 'outro') {
+      displayTitle = 'Workout Complete';
+      displaySubtitle = 'Great Job!';
+    }
 
     mediaItem.add(
       MediaItem(
-        id: 'active_workout',
-        title: _workoutTitle,
-        artist: ex != null ? 'Set $_currentSet of ${ex['sets']}' : '',
+        id: 'workout_${_currentIndex}_${DateTime.now().millisecondsSinceEpoch}',
+        title: displayTitle,
+        artist: displaySubtitle,
+        album: _workoutTitle,
+        artUri: localPath != null ? Uri.file(localPath) : null,
         extras: {
-          'stateType':
-              _currentScreenState, // 'intro', 'exercise_rep', 'exercise_time', 'rest', 'outro'
-          'exName': ex?['name'],
-          'reps': ex?['reps']?.toString(),
+          'stateType': _currentScreenState,
+          'exName': exName,
           'timerValue': _currentTimerSeconds,
-          'imageUrl': ex?['imageUrl'],
-          'localImagePath': ex?['localImagePath'],
-          // Data for the Status Modal
+          'reps': ex['reps']?.toString(),
+          'imageUrl': ex['imageUrl'],
+          'localImagePath': localPath,
           'totalExercises': _routine.length,
-          'currentExerciseIndex': _currentIndex + 1,
-          'totalSets': ex?['sets'],
+          'currentExerciseIndex': safeIndex + 1,
+          'totalSets': ex['sets'],
           'currentSet': _currentSet,
         },
       ),
     );
 
-    // NEW: Broadcasts the state so the Android Notification tray updates!
-    playbackState.add(
-      playbackState.value.copyWith(
-        controls: [
-          // Index 0: Skip Button
-          MediaControl.skipToNext,
-          // Index 1: Stop Button
-          MediaControl.stop,
-        ],
-        systemActions: const {MediaAction.seek},
-        // FIX: Added the array after the const keyword!
-        androidCompactActionIndices: const [],
-        processingState: AudioProcessingState.ready,
-        playing: true, // IMPORTANT: Tells Android not to kill the app!
-      ),
-    );
+    _updatePlaybackState(!_isPaused);
+  }
+
+  // --- 4. MEDIA CONTROLS ---
+
+  @override
+  Future<void> pause() async {
+    // FIX: Completely ignore Pause commands if it's a Rep-based exercise!
+    if (_currentScreenState == 'exercise_rep') {
+      _updatePlaybackState(
+        true,
+      ); // Bounce the Android UI back to its proper state
+      return;
+    }
+    _isPaused = true;
+    _updatePlaybackState(false);
+    await flutterTts.stop();
+  }
+
+  @override
+  Future<void> play() async {
+    if (_currentScreenState == 'exercise_rep') return;
+    _isPaused = false;
+    _updatePlaybackState(true);
+  }
+
+  // FIX: Wire up the Notification's "Next Track" arrow to advance the workout!
+  @override
+  Future<void> skipToNext() async {
+    await advanceSequence();
   }
 
   @override
   Future<void> stop() async {
     _isWorkoutActive = false;
     _stateTimer?.cancel();
-    _introTimer?.cancel(); // FIX: Kill the intro timer!
+    _introTimer?.cancel();
     await flutterTts.stop();
+
+    // FIX 1: Explicitly tell Android to destroy the media notification!
+    playbackState.add(
+      playbackState.value.copyWith(
+        processingState: AudioProcessingState.idle,
+        playing: false,
+        controls: [],
+      ),
+    );
+
+    _workoutAbortedController.add(true);
     return super.stop();
   }
 
-  // NEW: Safely restarts the current routine from the beginning
   Future<void> restartWorkout() async {
     if (currentWorkoutId == null) return;
     await startWorkoutSequence(_routine, _workoutTitle, currentWorkoutId!);
