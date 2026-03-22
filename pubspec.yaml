@@ -16,7 +16,7 @@ dependencies:
   riverpod_annotation: ^2.6.0
   # Local Persistence (Drift/SQLite)
   drift: ^2.20.0
-  sqlite3_flutter_libs: ^0.5.25
+  sqlite3_flutter_libs: ^0.6.0+eol
   path_provider: ^2.1.5
   path: ^1.9.1
   # AI & Agentic Logic
@@ -25,10 +25,10 @@ dependencies:
   # Interactive Workout Engine (Audio & Background)
   audio_service: ^0.18.17 # Background isolate persistence
   flutter_tts: ^4.2.2 # Voice guidance
-  just_audio: ^0.9.42 # Optional: for metronome or sound effects
+  just_audio: ^0.10.5 # Optional: for metronome or sound effects
   # Data Viz & Sharing
-  fl_chart: ^0.70.0 # Statistics dashboard
-  share_plus: ^10.1.0 # JSON workout export
+  fl_chart: ^1.2.0 # Statistics dashboard
+  share_plus: ^12.0.1 # JSON workout export
   json_annotation: ^4.9.0
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
@@ -43,7 +43,7 @@ dev_dependencies:
   json_serializable: ^6.9.0
 
   # Advanced Integration Testing
-  patrol: ^3.7.0 # Required for testing background notifications and audio
+  patrol: ^4.3.0 # Required for testing background notifications and audio
 flutter:
   uses-material-design: true
   generate: true

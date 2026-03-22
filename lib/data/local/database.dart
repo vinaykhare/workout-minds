@@ -158,6 +158,16 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  // Fetches the most recent logs globally AND grabs the workout title!
+  Future<List<TypedResult>> getRecentWorkoutLogsWithTitles({int limit = 10}) {
+    return (select(workoutLogs).join([
+            innerJoin(workouts, workouts.id.equalsExp(workoutLogs.workoutId)),
+          ])
+          ..orderBy([OrderingTerm.desc(workoutLogs.executedAt)])
+          ..limit(limit))
+        .get();
+  }
+
   // Deletes a workout and all its linked junction records automatically
   Future<void> deleteWorkout(int workoutId) {
     return (delete(workouts)..where((t) => t.id.equals(workoutId))).go();
