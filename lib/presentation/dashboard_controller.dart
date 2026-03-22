@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 import '../data/local/database.dart';
 import '../repositories/providers.dart';
 
@@ -8,7 +9,10 @@ part 'dashboard_controller.g.dart';
 class DashboardController extends _$DashboardController {
   @override
   Future<List<Workout>> build() async {
-    return ref.watch(databaseProvider).select(ref.read(databaseProvider).workouts).get();
+    return ref
+        .watch(databaseProvider)
+        .select(ref.read(databaseProvider).workouts)
+        .get();
   }
 
   Future<void> generateWorkout(String prompt) async {
@@ -19,10 +23,14 @@ class DashboardController extends _$DashboardController {
       final repository = ref.read(aiRepositoryProvider);
 
       // Trigger the Agentic Loop
-      await repository.generateWithTools(prompt);
+      final currentLocale = ref.read(userProfileProvider).appLocale;
+      await repository.generateWithTools(prompt, currentLocale);
 
       // Refresh the list from Drift [cite: 20]
-      return ref.read(databaseProvider).select(ref.read(databaseProvider).workouts).get();
+      return ref
+          .read(databaseProvider)
+          .select(ref.read(databaseProvider).workouts)
+          .get();
     });
   }
 }

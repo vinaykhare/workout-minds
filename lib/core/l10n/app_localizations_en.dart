@@ -81,4 +81,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get getReady => 'Get Ready...';
+
+  @override
+  String get genderTitle => 'How do you identify?';
+
+  @override
+  String get genderSubtitle =>
+      'This helps our AI calculate your baseline metrics.';
+
+  @override
+  String get genderMale => 'Male';
+
+  @override
+  String get genderFemale => 'Female';
 }

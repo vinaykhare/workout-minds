@@ -4,6 +4,7 @@ import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/presentation/active_workout_screen.dart';
 import 'package:workout_minds/presentation/dashboard_controller.dart';
 import 'package:workout_minds/presentation/workout_builder/workout_builder_screen.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/presentation/workout_detail_screen.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
@@ -134,7 +135,8 @@ class WorkoutListSection extends ConsumerWidget {
     final workout = await (db.select(
       db.workouts,
     )..where((t) => t.id.equals(workoutId))).getSingle();
-    handler.startWorkoutSequence(routine, workout.title, workout.id);
+    final appLocale = ref.read(userProfileProvider).appLocale;
+    handler.startWorkoutSequence(routine, workout.title, workout.id, appLocale);
 
     if (!context.mounted) return;
     Navigator.push(

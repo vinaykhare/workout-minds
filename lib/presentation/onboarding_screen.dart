@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../repositories/preferences_provider.dart';
-// import 'dashboard_screen.dart'; // Uncomment once you ensure the import path is correct
+import 'package:workout_minds/core/l10n/app_localizations.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -14,16 +14,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Temporary state to hold user's answers
   String _gender = '';
   String _goal = '';
   String _experience = '';
-  double _height = 170.0; // Default 170cm
-  double _weight = 70.0; // Default 70kg
+  double _height = 170.0;
+  double _weight = 70.0;
 
   void _nextPage() {
-    FocusScope.of(context).unfocus(); // Close keyboards if open
-    if (_currentPage < 3) {
+    FocusScope.of(context).unfocus();
+    if (_currentPage < 4) {
       _pageController.animateToPage(
         _currentPage + 1,
         duration: const Duration(milliseconds: 300),
@@ -35,52 +34,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _finishOnboarding() async {
+    final currentLocale = ref.read(userProfileProvider).appLocale;
     final newProfile = UserProfile(
       hasOnboarded: true,
+      appLocale: currentLocale, // Keeps the language they selected on Page 1
       gender: _gender,
       goal: _goal,
       experienceLevel: _experience,
       heightCm: _height,
       weightKg: _weight,
-      appLanguage: 'English',
     );
 
-    // Save it to SharedPreferences
     await ref.read(userProfileProvider.notifier).saveProfile(newProfile);
-
-    // Because our Gatekeeper in main.dart is watching the provider,
-    // saving this profile will automatically snap the app to the DashboardScreen!
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Progress Bar
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 24.0,
                 vertical: 16.0,
               ),
               child: LinearProgressIndicator(
-                value: (_currentPage + 1) / 4,
+                value: (_currentPage + 1) / 5, // 5 pages total
                 borderRadius: BorderRadius.circular(8),
                 minHeight: 8,
               ),
             ),
-
-            // Paged Content
             Expanded(
               child: PageView(
                 controller: _pageController,
-                physics:
-                    const NeverScrollableScrollPhysics(), // Disable swiping to force answers
+                physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (int page) =>
                     setState(() => _currentPage = page),
                 children: [
-                  _buildGenderPage(),
+                  _buildLanguagePage(),
+                  _buildGenderPage(l10n),
                   _buildGoalPage(),
                   _buildExperiencePage(),
                   _buildMetricsPage(),
@@ -93,16 +87,56 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 1: GENDER ---
-  Widget _buildGenderPage() {
+  // --- PAGE 1: LANGUAGE ---
+  Widget _buildLanguagePage() {
+    final currentLocale = ref.watch(userProfileProvider).appLocale;
+
     return _PageTemplate(
-      title: 'How do you identify?',
-      subtitle: 'This helps our AI calculate your baseline metrics.',
+      title: 'Choose Language\nBhasha Chunein',
+      subtitle: 'How would you like the app to talk to you?',
       content: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _SelectionCard(
-            title: 'Male',
+            title: 'English',
+            subtitle: 'Standard English',
+            icon: Icons.language,
+            isSelected: currentLocale == 'en',
+            onTap: () async {
+              await ref
+                  .read(userProfileProvider.notifier)
+                  .updateField('appLocale', 'en');
+              _nextPage();
+            },
+          ),
+          const SizedBox(height: 16),
+          _SelectionCard(
+            title: 'Hinglish',
+            subtitle: 'Conversational Indian English',
+            icon: Icons.chat_bubble_outline,
+            isSelected: currentLocale == 'hi',
+            onTap: () async {
+              await ref
+                  .read(userProfileProvider.notifier)
+                  .updateField('appLocale', 'hi');
+              _nextPage();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- PAGE 2: GENDER ---
+  Widget _buildGenderPage(AppLocalizations l10n) {
+    return _PageTemplate(
+      title: l10n.genderTitle,
+      subtitle: l10n.genderSubtitle,
+      content: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _SelectionCard(
+            title: l10n.genderMale,
             icon: Icons.male,
             isSelected: _gender == 'Male',
             onTap: () {
@@ -135,7 +169,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 2: GOAL ---
+  // --- PAGE 3: GOAL ---
   Widget _buildGoalPage() {
     return _PageTemplate(
       title: "What is your primary goal?",
@@ -177,7 +211,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 3: EXPERIENCE ---
+  // --- PAGE 4: EXPERIENCE ---
   Widget _buildExperiencePage() {
     return _PageTemplate(
       title: "What is your fitness level?",
@@ -222,7 +256,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 4: METRICS ---
+  // --- PAGE 5: METRICS ---
   Widget _buildMetricsPage() {
     return _PageTemplate(
       title: "Let's get your metrics",
@@ -310,7 +344,6 @@ class _PageTemplate extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: CustomScrollView(
-        // This makes it feel native and bouncy when scrolling
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(
@@ -329,11 +362,10 @@ class _PageTemplate extends StatelessWidget {
                   subtitle,
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
-                const SizedBox(height: 32), // Slightly reduced spacing
+                const SizedBox(height: 32),
               ],
             ),
           ),
-          // THE MAGIC FIX: Centers if there is room, scrolls if there isn't!
           SliverFillRemaining(hasScrollBody: false, child: content),
         ],
       ),

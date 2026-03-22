@@ -19,5 +19,9 @@
   "finishSet": "SET POORA HUA",
   "endWorkout": "Workout band karo",
   "restTime": "Aaraam ka samay",
-  "getReady": "Taiyaar ho jao..."
+  "getReady": "Taiyaar ho jao...",
+  "genderTitle": "Aapka gender kya hai?",
+  "genderSubtitle": "Isse hamari AI aapke metrics calculate karegi.",
+  "genderMale": "Purush (Male)",
+  "genderFemale": "Mahila (Female)"
 }

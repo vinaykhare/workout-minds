@@ -11,21 +11,21 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 // 2. The User Profile Model
 class UserProfile {
   final bool hasOnboarded;
+  final String appLocale; // NEW: 'en' or 'hi'
   final String gender;
   final String goal;
   final String experienceLevel;
   final double heightCm;
   final double weightKg;
-  final String appLanguage;
 
   UserProfile({
     required this.hasOnboarded,
+    required this.appLocale,
     required this.gender,
     required this.goal,
     required this.experienceLevel,
     required this.heightCm,
     required this.weightKg,
-    required this.appLanguage,
   });
 
   // Automatically calculates BMI on the fly!
@@ -37,6 +37,7 @@ class UserProfile {
 
   UserProfile copyWith({
     bool? hasOnboarded,
+    String? appLocale,
     String? gender,
     String? goal,
     String? experienceLevel,
@@ -45,12 +46,12 @@ class UserProfile {
   }) {
     return UserProfile(
       hasOnboarded: hasOnboarded ?? this.hasOnboarded,
+      appLocale: appLocale ?? this.appLocale,
       gender: gender ?? this.gender,
       goal: goal ?? this.goal,
       experienceLevel: experienceLevel ?? this.experienceLevel,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
-      appLanguage: appLanguage,
     );
   }
 }
@@ -65,24 +66,24 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
   static UserProfile _loadFromPrefs(SharedPreferences prefs) {
     return UserProfile(
       hasOnboarded: prefs.getBool('hasOnboarded') ?? false,
+      appLocale: prefs.getString('appLocale') ?? 'en', // Default to English
       gender: prefs.getString('gender') ?? '',
       goal: prefs.getString('goal') ?? '',
       experienceLevel: prefs.getString('experienceLevel') ?? '',
       heightCm: prefs.getDouble('heightCm') ?? 0.0,
       weightKg: prefs.getDouble('weightKg') ?? 0.0,
-      appLanguage: prefs.getString('appLanguage') ?? 'English',
     );
   }
 
   // Save full profile and mark onboarding as complete
   Future<void> saveProfile(UserProfile newProfile) async {
     await prefs.setBool('hasOnboarded', true);
+    await prefs.setString('appLocale', newProfile.appLocale);
     await prefs.setString('gender', newProfile.gender);
     await prefs.setString('goal', newProfile.goal);
     await prefs.setString('experienceLevel', newProfile.experienceLevel);
     await prefs.setDouble('heightCm', newProfile.heightCm);
     await prefs.setDouble('weightKg', newProfile.weightKg);
-    await prefs.setString('appLanguage', newProfile.appLanguage);
 
     // Update the state so the UI reacts instantly
     state = newProfile.copyWith(hasOnboarded: true);

@@ -36,8 +36,13 @@ class AIWorkoutRepository {
     );
   }
 
-  Future<void> generateWithTools(String userPrompt) async {
+  Future<void> generateWithTools(String userPrompt, String appLocale) async {
     final chat = _model.startChat();
+
+    // Inject the Hinglish directive conditionally
+    final languageDirective = appLocale == 'hi'
+        ? "CRITICAL: Write the Workout title in conversational Roman Hinglish (e.g., 'Aaj Chest Phodenge')."
+        : "CRITICAL: Write the Workout title in Standard English.";
 
     // 1. Prompt Initiation with STRICT Updated JSON Schema
     // 1. Prompt Initiation with STRICT Updated JSON Schema
@@ -48,6 +53,8 @@ class AIWorkoutRepository {
       You are a strict Backend REST API that generates fitness routines.
       User Request: "$userPrompt"
       
+      $languageDirective
+
       CRITICAL INSTRUCTIONS:
       1. Use your tools to check the local exercise library. If it lacks suitable exercises, invent standard ones (like Bench Press, Squats, etc.).
       2. NEVER refuse a request or ask for clarification. If the user request is short or vague (like "chest day" or "workout"), just invent a highly effective standard workout that fits the theme.

@@ -58,6 +58,7 @@ class WorkoutMindsApp extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider);
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+      locale: Locale(userProfile.appLocale),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,

@@ -14,6 +14,9 @@ class WorkoutAudioHandler extends BaseAudioHandler {
   int _currentSet = 1;
   String _workoutTitle = "";
 
+  // NEW: Tracks the current language for the audio engine
+  String _currentLanguage = 'en';
+
   bool _isWorkoutActive = false;
   bool _isProcessingAction = false;
   int? currentWorkoutId;
@@ -25,38 +28,72 @@ class WorkoutAudioHandler extends BaseAudioHandler {
   int _currentTimerSeconds = 0;
   Timer? _stateTimer;
   Timer? _introTimer;
+  bool _isPaused = false;
 
   WorkoutAudioHandler() {
-    flutterTts.setLanguage("en-US");
     flutterTts.setSpeechRate(0.5);
   }
 
   // --- 1. CORE STATE MANAGEMENT ---
 
+  // FIX: Added appLocale as the 4th positional argument!
   Future<void> startWorkoutSequence(
     List<Map<String, dynamic>> routine,
     String workoutTitle,
     int workoutId,
+    String appLocale,
   ) async {
-    // Prevent parallel workouts! Kill any active workout before starting a new one.
     if (_isWorkoutActive) {
       await stop();
     }
+
     currentWorkoutId = workoutId;
     _routine = routine;
     _workoutTitle = workoutTitle;
+    _currentLanguage = appLocale; // Save the language choice!
     _currentIndex = 0;
     _currentSet = 1;
     _isWorkoutActive = true;
     _isProcessingAction = false;
-    _isPaused = false; // Reset pause state
+    _isPaused = false;
 
-    // Phase 1: INTRO
+    // Switch the TTS Engine accent based on language
+    if (_currentLanguage == 'hi') {
+      await flutterTts.setLanguage(
+        "en-IN",
+      ); // Indian English handles Roman Hindi best
+      List<dynamic> voices = await flutterTts.getVoices;
+      for (var voice in voices) {
+        final name = voice["name"].toString().toLowerCase();
+        final locale = voice["locale"].toString();
+
+        // Windows Indian voices are usually named Heera or Ravi.
+        // Android voices usually contain 'en-in' or 'en_in'.
+        if (locale.contains("en-in") ||
+            locale.contains("en_in") ||
+            name.contains("heera") ||
+            name.contains("ravi")) {
+          await flutterTts.setVoice({
+            "name": voice["name"],
+            "locale": voice["locale"],
+          });
+          break; // Stop hunting once we find a good one
+        }
+      }
+    } else {
+      await flutterTts.setLanguage("en-US");
+    }
+
     _currentScreenState = 'intro';
     _pushStateToUi();
 
     await flutterTts.stop();
-    await flutterTts.speak("Workout Started. Let's crush it!");
+
+    // Dynamic Intro Speech
+    final introSpeech = _currentLanguage == 'hi'
+        ? "Workout shuru ho raha hai. Chalo shuru karein!"
+        : "Workout Started. Let's crush it!";
+    await flutterTts.speak(introSpeech);
 
     _introTimer?.cancel();
     _introTimer = Timer(const Duration(seconds: 3), () {
@@ -76,14 +113,21 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       _currentScreenState = 'exercise_time';
       _currentTimerSeconds = ex['durationSeconds'] as int;
       _pushStateToUi();
-      await flutterTts.speak(
-        "Next up: ${ex['name']}, for $_currentTimerSeconds seconds.",
-      );
+
+      final speech = _currentLanguage == 'hi'
+          ? "Agla hai: ${ex['name']}, $_currentTimerSeconds seconds ke liye."
+          : "Next up: ${ex['name']}, for $_currentTimerSeconds seconds.";
+      await flutterTts.speak(speech);
+
       _startCountdownTimer();
     } else {
       _currentScreenState = 'exercise_rep';
       _pushStateToUi();
-      await flutterTts.speak("Next up: ${ex['name']}, ${ex['reps']} reps.");
+
+      final speech = _currentLanguage == 'hi'
+          ? "Agla hai: ${ex['name']}, ${ex['reps']} reps."
+          : "Next up: ${ex['name']}, ${ex['reps']} reps.";
+      await flutterTts.speak(speech);
     }
   }
 
@@ -97,7 +141,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     _stateTimer?.cancel();
     await flutterTts.stop();
 
-    // Find out if we are at the end of the workout BEFORE we increment indexes
     if (_currentScreenState == 'exercise_rep' ||
         _currentScreenState == 'exercise_time') {
       final ex = _routine[_currentIndex];
@@ -109,7 +152,12 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         _currentScreenState = 'rest';
         _currentTimerSeconds = ex['restSecondsSet'] as int;
         _pushStateToUi();
-        await flutterTts.speak("Rest for $_currentTimerSeconds seconds.");
+
+        final speech = _currentLanguage == 'hi'
+            ? "$_currentTimerSeconds seconds aaram karein."
+            : "Rest for $_currentTimerSeconds seconds.";
+        await flutterTts.speak(speech);
+
         _startCountdownTimer();
       } else if (!isLastExercise) {
         _currentSet = 1;
@@ -117,14 +165,22 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         _currentScreenState = 'rest';
         _currentTimerSeconds = ex['restSecondsExercise'] as int;
         _pushStateToUi();
-        await flutterTts.speak(
-          "Exercise complete. Rest for $_currentTimerSeconds seconds.",
-        );
+
+        final speech = _currentLanguage == 'hi'
+            ? "Exercise khatam. $_currentTimerSeconds seconds aaram karein."
+            : "Exercise complete. Rest for $_currentTimerSeconds seconds.";
+        await flutterTts.speak(speech);
+
         _startCountdownTimer();
       } else {
         _currentScreenState = 'outro';
         _pushStateToUi();
-        await flutterTts.speak("Workout Complete! Great job.");
+
+        final speech = _currentLanguage == 'hi'
+            ? "Workout poora hua! Bahut badhiya."
+            : "Workout Complete! Great job.";
+        await flutterTts.speak(speech);
+
         _workoutCompleteController.add(true);
       }
     } else if (_currentScreenState == 'rest') {
@@ -142,7 +198,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
   void _startCountdownTimer() {
     _stateTimer?.cancel();
     _stateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // FIX: This must be inside the loop to freeze the clock when paused!
       if (_isPaused) return;
 
       if (!_isWorkoutActive) {
@@ -159,8 +214,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     });
   }
 
-  bool _isPaused = false;
-
   void _updatePlaybackState(bool isPlaying) {
     if (_currentScreenState == 'outro') {
       playbackState.add(
@@ -173,8 +226,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       return;
     }
 
-    // FIX: Android 13 forces a center button. For Rep exercises, we force it
-    // to look like it's "playing" so it doesn't look stalled.
     final forcePlaying = _currentScreenState == 'exercise_rep'
         ? true
         : isPlaying;
@@ -205,7 +256,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     final exName = ex['name'] as String;
     final localPath = ex['localImagePath'] as String?;
 
-    // FIX 1: Change what the notification says based on the screen!
     String displayTitle = exName;
     String displaySubtitle = 'Set $_currentSet of ${ex['sets']}';
 
@@ -246,11 +296,8 @@ class WorkoutAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> pause() async {
-    // FIX: Completely ignore Pause commands if it's a Rep-based exercise!
     if (_currentScreenState == 'exercise_rep') {
-      _updatePlaybackState(
-        true,
-      ); // Bounce the Android UI back to its proper state
+      _updatePlaybackState(true);
       return;
     }
     _isPaused = true;
@@ -265,7 +312,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     _updatePlaybackState(true);
   }
 
-  // FIX: Wire up the Notification's "Next Track" arrow to advance the workout!
   @override
   Future<void> skipToNext() async {
     await advanceSequence();
@@ -278,7 +324,6 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     _introTimer?.cancel();
     await flutterTts.stop();
 
-    // FIX 1: Explicitly tell Android to destroy the media notification!
     playbackState.add(
       playbackState.value.copyWith(
         processingState: AudioProcessingState.idle,
@@ -293,6 +338,12 @@ class WorkoutAudioHandler extends BaseAudioHandler {
 
   Future<void> restartWorkout() async {
     if (currentWorkoutId == null) return;
-    await startWorkoutSequence(_routine, _workoutTitle, currentWorkoutId!);
+    // Uses the saved _currentLanguage to restart!
+    await startWorkoutSequence(
+      _routine,
+      _workoutTitle,
+      currentWorkoutId!,
+      _currentLanguage,
+    );
   }
 }

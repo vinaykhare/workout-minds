@@ -82,4 +82,16 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get getReady => 'Taiyaar ho jao...';
+
+  @override
+  String get genderTitle => 'Aapka gender kya hai?';
+
+  @override
+  String get genderSubtitle => 'Isse hamari AI aapke metrics calculate karegi.';
+
+  @override
+  String get genderMale => 'Purush (Male)';
+
+  @override
+  String get genderFemale => 'Mahila (Female)';
 }

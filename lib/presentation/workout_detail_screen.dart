@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/data/local/database.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'active_workout_screen.dart';
 
@@ -199,7 +200,13 @@ class WorkoutDetailScreen extends ConsumerWidget {
           }).toList();
 
           final handler = ref.read(audioHandlerProvider);
-          handler.startWorkoutSequence(routine, workout.title, workout.id);
+          final appLocale = ref.read(userProfileProvider).appLocale;
+          handler.startWorkoutSequence(
+            routine,
+            workout.title,
+            workout.id,
+            appLocale,
+          );
           Navigator.push(
             context,
             MaterialPageRoute(

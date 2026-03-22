@@ -223,6 +223,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get Ready...'**
   String get getReady;
+
+  /// No description provided for @genderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How do you identify?'**
+  String get genderTitle;
+
+  /// No description provided for @genderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This helps our AI calculate your baseline metrics.'**
+  String get genderSubtitle;
+
+  /// No description provided for @genderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get genderMale;
+
+  /// No description provided for @genderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get genderFemale;
 }
 
 class _AppLocalizationsDelegate

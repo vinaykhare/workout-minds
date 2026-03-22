@@ -19,5 +19,9 @@
   "finishSet": "FINISH SET",
   "endWorkout": "End Workout Early",
   "restTime": "Rest Time",
-  "getReady": "Get Ready..."
+  "getReady": "Get Ready...",
+  "genderTitle": "How do you identify?",
+  "genderSubtitle": "This helps our AI calculate your baseline metrics.",
+  "genderMale": "Male",
+  "genderFemale": "Female"
 }

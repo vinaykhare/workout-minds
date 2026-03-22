@@ -6,16 +6,14 @@ import 'package:workout_minds/repositories/providers.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  // Helper to color-code the BMI result
   Color _getBMIColor(double bmi) {
     if (bmi == 0) return Colors.grey;
-    if (bmi < 18.5) return Colors.blue; // Underweight
-    if (bmi < 25.0) return Colors.green; // Normal
-    if (bmi < 30.0) return Colors.orange; // Overweight
-    return Colors.redAccent; // Obese
+    if (bmi < 18.5) return Colors.blue;
+    if (bmi < 25.0) return Colors.green;
+    if (bmi < 30.0) return Colors.orange;
+    return Colors.redAccent;
   }
 
-  // Helper for the BMI text label
   String _getBMICategory(double bmi) {
     if (bmi == 0) return 'Unknown';
     if (bmi < 18.5) return 'Underweight';
@@ -30,6 +28,9 @@ class SettingsScreen extends ConsumerWidget {
     final notifier = ref.read(userProfileProvider.notifier);
 
     final bmiColor = _getBMIColor(profile.bmi);
+
+    // Map the locale code to a readable string
+    final displayLanguage = profile.appLocale == 'hi' ? 'Hinglish' : 'English';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings & Profile')),
@@ -85,7 +86,38 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // --- 2. EDITABLE PROFILE METRICS ---
+          // --- 2. APP PREFERENCES ---
+          const Padding(
+            padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+            child: Text(
+              'App Preferences',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.language,
+            title: 'App Language',
+            value: displayLanguage,
+            onTap: () => _showOptionsDialog(
+              context,
+              'App Language',
+              displayLanguage,
+              ['English', 'Hinglish'],
+              (val) {
+                // Map the readable string back to the locale code
+                final localeCode = val == 'Hinglish' ? 'hi' : 'en';
+                notifier.updateField('appLocale', localeCode);
+              },
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // --- 3. EDITABLE PROFILE METRICS ---
           const Padding(
             padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
             child: Text(
@@ -126,7 +158,7 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // --- 3. FITNESS GOALS ---
+          // --- 4. FITNESS GOALS ---
           const Padding(
             padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
             child: Text(
@@ -165,34 +197,7 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 48),
 
-          // --- 3. FITNESS GOALS ---
-          const Padding(
-            padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
-            child: Text(
-              'Language',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          _SettingsTile(
-            icon: Icons.flag_outlined,
-            title: 'Select Language',
-            value: 'English',
-            onTap: () => _showOptionsDialog(
-              context,
-              'Select Language',
-              'English',
-              ['English', 'Hinglish'],
-              (val) => notifier.updateField('Select Language', val),
-            ),
-          ),
-
-          const SizedBox(height: 48),
-
-          // --- 4. DANGER ZONE ---
+          // --- 5. DANGER ZONE ---
           const Padding(
             padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
             child: Text(
@@ -299,7 +304,6 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Update $title'),
-        // FIX: Wrap the Column in the new RadioGroup widget!
         content: RadioGroup<String>(
           groupValue: currentValue,
           onChanged: (val) {
@@ -312,11 +316,7 @@ class SettingsScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: options
                 .map(
-                  (opt) => RadioListTile<String>(
-                    title: Text(opt),
-                    value: opt,
-                    // Notice how groupValue and onChanged are completely removed from here!
-                  ),
+                  (opt) => RadioListTile<String>(title: Text(opt), value: opt),
                 )
                 .toList(),
           ),
@@ -360,7 +360,7 @@ class SettingsScreen extends ConsumerWidget {
                   border: OutlineInputBorder(),
                   hintText: 'DELETE',
                 ),
-                onChanged: (val) => setState(() {}), // Rebuild to check text
+                onChanged: (val) => setState(() {}),
               ),
             ],
           ),
@@ -376,22 +376,16 @@ class SettingsScreen extends ConsumerWidget {
               ),
               onPressed: textController.text == 'DELETE'
                   ? () async {
-                      // 1. Wipe Database
                       await ref.read(databaseProvider).wipeAllUserData();
-
-                      // 2. Wipe Preferences
                       final prefs = ref.read(sharedPreferencesProvider);
                       await prefs.clear();
-
-                      // 3. Reset State Provider (This triggers main.dart to swap the root to Onboarding!)
                       await ref
                           .read(userProfileProvider.notifier)
                           .updateField('hasOnboarded', false);
 
                       if (!context.mounted) return;
 
-                      // FIX: Stop shoving a new screen on top!
-                      // Just pop the Dialog and Settings screen away, revealing the root underneath.
+                      // Properly pop away the dialog and settings screen to reveal Onboarding
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     }
                   : null,
