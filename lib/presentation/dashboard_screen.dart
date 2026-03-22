@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/presentation/dashboard_controller.dart';
+import 'package:workout_minds/presentation/settings_screen.dart';
 import 'package:workout_minds/presentation/widgets/recent_workouts_section.dart';
 import 'package:workout_minds/presentation/widgets/weekly_progress_card.dart';
 import 'package:workout_minds/presentation/widgets/workout_list_section.dart';
@@ -39,7 +40,18 @@ class DashboardScreen extends ConsumerWidget {
             tooltip: l10n.aiGenerate,
             onPressed: () => _showAiGenerator(context, ref),
           ),
-          const SizedBox(width: 8), // Padding for edge
+          // FIX: Added the Settings button!
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings & Profile',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: workoutsAsync.when(

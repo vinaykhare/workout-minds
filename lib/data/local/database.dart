@@ -195,6 +195,16 @@ class AppDatabase extends _$AppDatabase {
       workoutLogs,
     )..where((t) => t.executedAt.isBiggerOrEqualValue(sevenDaysAgo))).get();
   }
+
+  // --- DANGER ZONE: Factory Reset ---
+  Future<void> wipeAllUserData() async {
+    // Delete all historical logs and custom workouts
+    await delete(exerciseLogs).go();
+    await delete(workoutLogs).go();
+    await delete(workoutExercises).go();
+    await delete(workouts).go();
+    // Note: We leave the 'exercises' table alone so the global library remains intact!
+  }
 }
 
 LazyDatabase _openConnection() {
