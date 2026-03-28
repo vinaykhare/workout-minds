@@ -44,4 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /windows
-/core/constants.dart
+
+# Environment related
+.env

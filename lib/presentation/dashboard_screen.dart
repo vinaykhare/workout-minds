@@ -17,6 +17,23 @@ class DashboardScreen extends ConsumerWidget {
     final workoutsAsync = ref.watch(dashboardControllerProvider);
     final l10n = AppLocalizations.of(context)!;
 
+    // Listen for background errors and show a SnackBar!
+    ref.listen(dashboardControllerProvider, (previous, next) {
+      if (next is AsyncError) {
+        // Clean up the error text to look nice for the user
+        final errorText = next.error.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorText),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
+    final dashboardState = ref.watch(dashboardControllerProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
@@ -54,82 +71,110 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: workoutsAsync.when(
-        data: (workouts) => LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 800;
+      body: Stack(
+        children: [
+          workoutsAsync.when(
+            data: (workouts) => LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 800;
 
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: CustomScrollView(
-                      slivers: [
-                        const SliverToBoxAdapter(child: WeeklyProgressCard()),
-                        const SliverToBoxAdapter(
-                          child: RecentWorkoutsSection(),
+                if (isWide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: CustomScrollView(
+                          slivers: [
+                            const SliverToBoxAdapter(
+                              child: WeeklyProgressCard(),
+                            ),
+                            const SliverToBoxAdapter(
+                              child: RecentWorkoutsSection(),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    flex: 1,
-                    child: CustomScrollView(
-                      slivers: [WorkoutListSection(workouts: workouts)],
-                    ),
-                  ),
-                ],
-              );
-            }
+                      ),
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        flex: 1,
+                        child: CustomScrollView(
+                          slivers: [WorkoutListSection(workouts: workouts)],
+                        ),
+                      ),
+                    ],
+                  );
+                }
 
-            return CustomScrollView(
-              slivers: [
-                const SliverToBoxAdapter(child: WeeklyProgressCard()),
-                const SliverToBoxAdapter(child: RecentWorkoutsSection()),
-                WorkoutListSection(workouts: workouts),
-              ],
-            );
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.redAccent,
-                  size: 64,
+                return CustomScrollView(
+                  slivers: [
+                    const SliverToBoxAdapter(child: WeeklyProgressCard()),
+                    const SliverToBoxAdapter(child: RecentWorkoutsSection()),
+                    WorkoutListSection(workouts: workouts),
+                  ],
+                );
+              },
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 64,
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text(
+                          l10n.errorPrefix("AI Generation Failed"),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      e.toString().replaceAll('Exception: ', ''),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Dismiss & Go Back'),
+                      onPressed: () =>
+                          ref.invalidate(dashboardControllerProvider),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.errorPrefix("AI Generation Failed"),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  e.toString().replaceAll('Exception: ', ''),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Dismiss & Go Back'),
-                  onPressed: () => ref.invalidate(dashboardControllerProvider),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          if (dashboardState.isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'AI is building your workout...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
       // floatingActionButton block is completely DELETED!
     );

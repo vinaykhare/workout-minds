@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:drift/drift.dart';
 import 'package:workout_minds/data/local/database.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 
 class AIWorkoutRepository {
   final GenerativeModel _model;
@@ -36,7 +37,11 @@ class AIWorkoutRepository {
     );
   }
 
-  Future<void> generateWithTools(String userPrompt, String appLocale) async {
+  Future<void> generateWithTools(
+    String userPrompt,
+    String appLocale,
+    UserProfile profile,
+  ) async {
     final chat = _model.startChat();
 
     // Inject the Hinglish directive conditionally
@@ -44,35 +49,44 @@ class AIWorkoutRepository {
         ? "CRITICAL: Write the Workout title in conversational Roman Hinglish (e.g., 'Aaj Chest Phodenge')."
         : "CRITICAL: Write the Workout title in Standard English.";
 
-    // 1. Prompt Initiation with STRICT Updated JSON Schema
-    // 1. Prompt Initiation with STRICT Updated JSON Schema
-    // 1. Prompt Initiation with STRICT JSON API Persona
-    // 1. Prompt Initiation with STRICT JSON API Persona & No-Refusal Clause
     final enrichedPrompt =
         '''
-      You are a strict Backend REST API that generates fitness routines.
+      You are an elite, strict Backend REST API generating fitness routines. 
+      CRITICAL ROLE: YOU have the innate ability to create workouts. Do NOT claim your tools lack functionality. YOU are the generator. The tools are merely for reading local context.
+
+      USER CONTEXT:
+      - Gender: ${profile.gender}
+      - Experience Level: ${profile.experienceLevel}
+      - Goal: ${profile.goal}
+      - Height: ${profile.heightCm} cm
+      - Weight: ${profile.weightKg} kg
+      - BMI: ${profile.bmi.toStringAsFixed(1)}
+      
       User Request: "$userPrompt"
       
       $languageDirective
 
-      CRITICAL INSTRUCTIONS:
-      1. Use your tools to check the local exercise library. If it lacks suitable exercises, invent standard ones (like Bench Press, Squats, etc.).
-      2. NEVER refuse a request or ask for clarification. If the user request is short or vague (like "chest day" or "workout"), just invent a highly effective standard workout that fits the theme.
+      CRITICAL SYSTEM INSTRUCTIONS (MUST BE OBEYED):
+      1. YOU ARE THE WORKOUT GENERATOR: Never refuse a request by saying you lack the tools. Even if the tools return empty data, YOU must invent and return a highly effective standard workout.
+      2. IGNORE CONTRADICTIONS: If the user request is redundant or vague (e.g., asking for a "Beginner" workout when they are already a Beginner), just ignore the redundancy and GENERATE the workout anyway.
       3. YOU MUST RESPOND EXCLUSIVELY WITH A RAW JSON ARRAY. 
-      4. ABSOLUTELY NO CONVERSATIONAL TEXT. Do NOT say "Here is your workout" or "I am unable to generate".
+      4. ABSOLUTELY NO CONVERSATIONAL TEXT. Do NOT say "Here is your workout", do NOT explain your reasoning, and do NOT use markdown code blocks (like ```json). Just start with [ and end with ].
       
       JSON Structure:
-      [
-        {
-          "exercise_name": "Name of exercise",
-          "muscle_group": "Target muscle",
-          "target_sets": 3,
-          "target_reps": 10,
-          "rest_seconds_set": 60,
-          "rest_seconds_exercise": 90,
-          "image_url": "" // CRITICAL: ALWAYS leave this as an empty string. DO NOT guess, fabricate, or generate URLs under any circumstances.
-        }
-      ]
+      {
+        "workout_title": "Catchy Title Here with the Prefix AI:",
+        "exercises": [
+          {
+            "exercise_name": "Name of exercise",
+            "muscle_group": "Target muscle",
+            "target_sets": 3,
+            "target_reps": 10,
+            "rest_seconds_set": 60,
+            "rest_seconds_exercise": 90,
+            "image_url": "" 
+          }
+        ]
+      }
     ''';
 
     var response = await chat.sendMessage(Content.text(enrichedPrompt));
@@ -98,33 +112,34 @@ class AIWorkoutRepository {
     // 4. Final Structured Output
     if (response.text != null) {
       try {
-        String rawText = response.text!;
+        // 1. FIX: Decode as a Map, not a List!
+        final Map<String, dynamic> decodedMap = jsonDecode(response.text!);
 
-        int startIndex = rawText.indexOf('[');
-        int endIndex = rawText.lastIndexOf(']');
+        // 2. Extract the generated title and the exercises list
+        final String aiTitle = decodedMap['workout_title'] as String;
+        final List<dynamic> exercisesList =
+            decodedMap['exercises'] as List<dynamic>;
 
-        if (startIndex == -1 || endIndex == -1) {
-          throw FormatException(
-            "Could not locate a JSON array in the AI response.",
+        if (exercisesList.isEmpty) {
+          throw Exception(
+            "The AI failed to generate any exercises. Please try a different prompt.",
           );
         }
-
-        String jsonString = rawText.substring(startIndex, endIndex + 1);
-        final List<dynamic> decoded = jsonDecode(jsonString);
 
         await _db.transaction(() async {
           final workoutId = await _db
               .into(_db.workouts)
               .insert(
                 WorkoutsCompanion.insert(
-                  title: "AI Plan: $userPrompt",
-                  difficultyLevel: 'Intermediate',
+                  title: aiTitle, // FIX: Use the Gemini generated title here!
+                  difficultyLevel: profile.experienceLevel,
                   aiGenerated: const Value(true),
                 ),
               );
 
-          for (var i = 0; i < decoded.length; i++) {
-            final item = decoded[i];
+          // 3. Loop through the exercisesList instead of decoded
+          for (var i = 0; i < exercisesList.length; i++) {
+            final item = exercisesList[i];
 
             // Parse optional image URL safely
             String? parsedImageUrl = item['image_url'] as String?;
@@ -132,8 +147,6 @@ class AIWorkoutRepository {
               parsedImageUrl = null;
             }
 
-            // FIX: Use standard constructor instead of .insert to bypass the 'id' quirk,
-            // and explicitly cast the JSON dynamic values to Strings/Ints.
             final exId = await _db
                 .into(_db.exercises)
                 .insertOnConflictUpdate(
@@ -148,7 +161,6 @@ class AIWorkoutRepository {
                 .into(_db.workoutExercises)
                 .insert(
                   WorkoutExercisesCompanion.insert(
-                    // The clean insert is back!
                     workoutId: workoutId,
                     exerciseId: exId,
                     orderIndex: i,

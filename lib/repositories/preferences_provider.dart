@@ -17,6 +17,10 @@ class UserProfile {
   final String experienceLevel;
   final double heightCm;
   final double weightKg;
+  final int aiCredits;
+  final bool isPro;
+  final String customApiKey;
+  final String customModelName;
 
   UserProfile({
     required this.hasOnboarded,
@@ -26,6 +30,10 @@ class UserProfile {
     required this.experienceLevel,
     required this.heightCm,
     required this.weightKg,
+    required this.aiCredits,
+    required this.isPro,
+    required this.customApiKey,
+    required this.customModelName,
   });
 
   // Automatically calculates BMI on the fly!
@@ -43,6 +51,10 @@ class UserProfile {
     String? experienceLevel,
     double? heightCm,
     double? weightKg,
+    int? aiCredits,
+    bool? isPro,
+    String? customApiKey,
+    String? customModelName,
   }) {
     return UserProfile(
       hasOnboarded: hasOnboarded ?? this.hasOnboarded,
@@ -52,6 +64,10 @@ class UserProfile {
       experienceLevel: experienceLevel ?? this.experienceLevel,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
+      aiCredits: aiCredits ?? this.aiCredits,
+      isPro: isPro ?? this.isPro,
+      customApiKey: this.customApiKey,
+      customModelName: customModelName ?? this.customModelName,
     );
   }
 }
@@ -72,6 +88,10 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
       experienceLevel: prefs.getString('experienceLevel') ?? '',
       heightCm: prefs.getDouble('heightCm') ?? 0.0,
       weightKg: prefs.getDouble('weightKg') ?? 0.0,
+      aiCredits: prefs.getInt('aiCredits') ?? 3,
+      isPro: prefs.getBool('isPro') ?? false,
+      customApiKey: prefs.getString('customApiKey') ?? '',
+      customModelName: prefs.getString('customModelName') ?? '',
     );
   }
 
@@ -84,9 +104,23 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
     await prefs.setString('experienceLevel', newProfile.experienceLevel);
     await prefs.setDouble('heightCm', newProfile.heightCm);
     await prefs.setDouble('weightKg', newProfile.weightKg);
-
+    await prefs.setInt('aiCredits', newProfile.aiCredits);
+    await prefs.setBool('isPro', newProfile.isPro);
+    await prefs.setString('customApiKey', newProfile.customApiKey);
+    await prefs.setString('customModelName', newProfile.customModelName);
     // Update the state so the UI reacts instantly
     state = newProfile.copyWith(hasOnboarded: true);
+  }
+
+  // A dedicated method to burn a credit
+  Future<void> useAiCredit() async {
+    if (state.isPro) return; // Pro users have "unlimited" usage
+    final currentCredits = state.aiCredits;
+    if (currentCredits > 0) {
+      final newTotal = currentCredits - 1;
+      await prefs.setInt('aiCredits', newTotal);
+      state = state.copyWith(aiCredits: newTotal);
+    }
   }
 
   // Just updates a specific field (for the Settings screen later)

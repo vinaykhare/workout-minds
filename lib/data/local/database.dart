@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
@@ -211,6 +213,18 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'workout_minds.sqlite'));
-    return NativeDatabase(file);
+
+    // 1. THE ANDROID FIX: Forces the OS to locate the bundled libsqlite3.so
+    if (Platform.isAndroid) {
+      await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
+    }
+
+    // 2. SANDBOX FIX: Tell SQLite exactly where it is allowed to write temporary files
+    final cachebase = (await getTemporaryDirectory()).path;
+    sqlite3.tempDirectory = cachebase;
+
+    // 3. PERFORMANCE FIX: Open the database in a background isolate
+    // This prevents the UI from freezing when the AI inserts massive workout JSONs!
+    return NativeDatabase.createInBackground(file);
   });
 }

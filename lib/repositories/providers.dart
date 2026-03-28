@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:workout_minds/core/constants.dart';
 import 'package:workout_minds/data/local/database.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
 import 'ai_workout_repository.dart';
 
@@ -15,15 +16,68 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 });
 
 // Updated Vertex AI Model Provider using AppConstants
+// --- YOUR UPDATED PROVIDERS ---
+
 final aiModelProvider = Provider<GenerativeModel>((ref) {
+  final profile = ref.watch(userProfileProvider);
+
+  final defaultDevKey = dotenv.env['GEMINI_API_KEY'] ?? 'MISSING_KEY';
+  final defaultModelName = dotenv.env['MODEL_NAME'] ?? 'gemini-2.5-flash-lite';
+
+  final activeApiKey = (profile.isPro && profile.customApiKey.isNotEmpty)
+      ? profile.customApiKey
+      : defaultDevKey;
+
+  final activeModelName = (profile.isPro && profile.customModelName.isNotEmpty)
+      ? profile.customModelName
+      : defaultModelName;
+
+  // THE SILVER BULLET: This forces the API to strictly output JSON
+  // It completely eliminates conversational text and format errors.
+  // THE SILVER BULLET: Dynamic Title + Strict Array
+  final generationConfig = GenerationConfig(
+    responseMimeType: 'application/json',
+    responseSchema: Schema.object(
+      properties: {
+        "workout_title": Schema.string(
+          description:
+              "A short, catchy, highly motivating title for this specific workout.",
+        ),
+        "exercises": Schema.array(
+          description: "A list of at least 4 fitness exercises.",
+          items: Schema.object(
+            properties: {
+              "exercise_name": Schema.string(),
+              "muscle_group": Schema.string(),
+              "target_sets": Schema.integer(),
+              "target_reps": Schema.integer(),
+              "rest_seconds_set": Schema.integer(),
+              "rest_seconds_exercise": Schema.integer(),
+              "image_url": Schema.string(),
+            },
+            requiredProperties: [
+              "exercise_name",
+              "muscle_group",
+              "target_sets",
+              "target_reps",
+              "rest_seconds_set",
+              "rest_seconds_exercise",
+            ],
+          ),
+        ),
+      },
+      requiredProperties: ["workout_title", "exercises"],
+    ),
+  );
+
   return GenerativeModel(
-    model: AppConstants.modelName,
-    apiKey: AppConstants.geminiApiKey, // Using the constant key
-    tools: workoutTools,
+    model: activeModelName,
+    apiKey: activeApiKey,
+    // tools: workoutTools,
+    generationConfig: generationConfig, // Inject the strict schema here!
   );
 });
 
-// The AI Repository Provider
 final aiRepositoryProvider = Provider<AIWorkoutRepository>((ref) {
   final model = ref.watch(aiModelProvider);
   final db = ref.watch(databaseProvider);

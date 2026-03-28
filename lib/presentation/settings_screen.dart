@@ -3,8 +3,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 
-class SettingsScreen extends ConsumerWidget {
+// CHANGED: Converted to ConsumerStatefulWidget to manage the text field and dropdown
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late TextEditingController _apiKeyController;
+
+  // A predefined list of supported models
+  final List<String> _availableModels = [
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+  ];
+
+  String _selectedModel = 'gemini-2.5-flash-lite';
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = ref.read(userProfileProvider);
+    _apiKeyController = TextEditingController(text: profile.customApiKey);
+
+    if (profile.customModelName.isNotEmpty &&
+        _availableModels.contains(profile.customModelName)) {
+      _selectedModel = profile.customModelName;
+    }
+  }
+
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    super.dispose();
+  }
 
   Color _getBMIColor(double bmi) {
     if (bmi == 0) return Colors.grey;
@@ -22,14 +58,27 @@ class SettingsScreen extends ConsumerWidget {
     return 'Obese';
   }
 
+  // Helper to save profile safely with the new fields
+  Future<void> _saveProSettings(
+    UserProfile currentProfile, {
+    bool? isPro,
+    String? apiKey,
+    String? modelName,
+  }) async {
+    final updatedProfile = currentProfile.copyWith(
+      isPro: isPro ?? currentProfile.isPro,
+      customApiKey: apiKey ?? currentProfile.customApiKey,
+      customModelName: modelName ?? currentProfile.customModelName,
+    );
+    await ref.read(userProfileProvider.notifier).saveProfile(updatedProfile);
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final profile = ref.watch(userProfileProvider);
     final notifier = ref.read(userProfileProvider.notifier);
 
     final bmiColor = _getBMIColor(profile.bmi);
-
-    // Map the locale code to a readable string
     final displayLanguage = profile.appLocale == 'hi' ? 'Hinglish' : 'English';
 
     return Scaffold(
@@ -108,13 +157,11 @@ class SettingsScreen extends ConsumerWidget {
               displayLanguage,
               ['English', 'Hinglish'],
               (val) {
-                // Map the readable string back to the locale code
                 final localeCode = val == 'Hinglish' ? 'hi' : 'en';
                 notifier.updateField('appLocale', localeCode);
               },
             ),
           ),
-
           const SizedBox(height: 24),
 
           // --- 3. EDITABLE PROFILE METRICS ---
@@ -155,7 +202,6 @@ class SettingsScreen extends ConsumerWidget {
               (val) => notifier.updateField('weightKg', val),
             ),
           ),
-
           const SizedBox(height: 24),
 
           // --- 4. FITNESS GOALS ---
@@ -194,10 +240,142 @@ class SettingsScreen extends ConsumerWidget {
               (val) => notifier.updateField('experienceLevel', val),
             ),
           ),
+          const SizedBox(height: 24),
+
+          // --- 5. SUBSCRIPTION & AI SETTINGS ---
+          const Padding(
+            padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+            child: Text(
+              'Subscription & AI',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.star,
+            title: 'AI Credits Remaining',
+            value: profile.isPro ? 'Unlimited' : '${profile.aiCredits}',
+            onTap: () {
+              // Dev test: Give 5 credits
+              notifier.updateField('aiCredits', profile.aiCredits + 5);
+            },
+          ),
+          Card(
+            elevation: 0,
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withAlpha(100),
+            child: SwitchListTile(
+              secondary: const Icon(
+                Icons.workspace_premium,
+                color: Colors.deepPurpleAccent,
+              ),
+              title: const Text(
+                'Enable Pro Mode',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                'Unlock BYOK (Bring Your Own Key)',
+                style: TextStyle(fontSize: 12),
+              ),
+              value: profile.isPro,
+              activeThumbColor: Colors.deepPurpleAccent,
+              onChanged: (value) => _saveProSettings(profile, isPro: value),
+            ),
+          ),
+
+          // --- Power User (BYOK) Section (Only visible if Pro) ---
+          if (profile.isPro) ...[
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              color: Colors.deepPurpleAccent.withAlpha(20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.deepPurpleAccent.withAlpha(50)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.key,
+                          size: 16,
+                          color: Colors.deepPurpleAccent,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'POWER USER CONFIG',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurpleAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _apiKeyController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Custom Gemini API Key',
+                        filled: true,
+                        fillColor: Theme.of(context).scaffoldBackgroundColor,
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: const Icon(
+                            Icons.save,
+                            color: Colors.deepPurpleAccent,
+                          ),
+                          onPressed: () {
+                            _saveProSettings(
+                              profile,
+                              apiKey: _apiKeyController.text.trim(),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('API Key Saved!')),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedModel,
+                      decoration: InputDecoration(
+                        labelText: 'Preferred AI Model',
+                        filled: true,
+                        fillColor: Theme.of(context).scaffoldBackgroundColor,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: _availableModels.map((String model) {
+                        return DropdownMenuItem<String>(
+                          value: model,
+                          child: Text(model),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() => _selectedModel = newValue);
+                          _saveProSettings(profile, modelName: newValue);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
 
           const SizedBox(height: 48),
 
-          // --- 5. DANGER ZONE ---
+          // --- 6. DANGER ZONE ---
           const Padding(
             padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
             child: Text(
@@ -300,19 +478,13 @@ class SettingsScreen extends ConsumerWidget {
     List<String> options,
     Function(String) onSave,
   ) {
+    String tempValue = currentValue; // Track the local state
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Update $title'),
-        content: RadioGroup<String>(
-          groupValue: currentValue,
-          onChanged: (val) {
-            if (val != null) {
-              onSave(val);
-              Navigator.pop(context);
-            }
-          },
-          child: Column(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Update $title'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: options
                 .map(
@@ -320,13 +492,20 @@ class SettingsScreen extends ConsumerWidget {
                 )
                 .toList(),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                onSave(tempValue); // Save to Riverpod
+                Navigator.pop(context); // Close dialog
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
       ),
     );
   }
@@ -376,16 +555,25 @@ class SettingsScreen extends ConsumerWidget {
               ),
               onPressed: textController.text == 'DELETE'
                   ? () async {
+                      // 1. Wipe the Database
                       await ref.read(databaseProvider).wipeAllUserData();
-                      final prefs = ref.read(sharedPreferencesProvider);
-                      await prefs.clear();
+
+                      // 2. Wipe Preferences
+                      // (Ensure you have sharedPreferencesProvider defined,
+                      // or use SharedPreferences.getInstance() directly here)
+                      // final prefs = ref.read(sharedPreferencesProvider);
+                      // await prefs.clear();
+
+                      // 3. Reset User Profile to trigger onboarding
                       await ref
                           .read(userProfileProvider.notifier)
                           .updateField('hasOnboarded', false);
 
-                      if (!context.mounted) return;
+                      // 4. FIX: Force the Dashboard graph to redraw its empty state!
+                      ref.invalidate(weeklyStatsProvider);
+                      // ref.invalidate(workoutsStreamProvider); // Add this if needed
 
-                      // Properly pop away the dialog and settings screen to reveal Onboarding
+                      if (!context.mounted) return;
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     }
                   : null,

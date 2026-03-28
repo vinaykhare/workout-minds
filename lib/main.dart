@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
@@ -38,6 +39,7 @@ Future<void> main() async {
     ),
   );
 
+  await dotenv.load(fileName: ".env");
   runApp(
     ProviderScope(
       // Inject the initialized audioHandler into the Riverpod tree

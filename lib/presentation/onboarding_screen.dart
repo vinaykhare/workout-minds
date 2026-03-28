@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
+import 'package:workout_minds/presentation/dashboard_controller.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -34,17 +35,62 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _finishOnboarding() async {
+    // 1. Show a loading overlay so they know something is happening
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Generating your first custom plan...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // 2. Trigger the AI to build a baseline routine
+    try {
+      final aiPrompt =
+          "Create a perfectly balanced baseline workout based on my profile.";
+      await ref
+          .read(dashboardControllerProvider.notifier)
+          .generateWorkout(aiPrompt);
+    } catch (e) {
+      // If there is no internet or the API is busy, we silently swallow the error.
+      // The user will just land on an empty dashboard instead.
+      // FIX: Temporarily print the exact reason it failed!
+      // print('=== AI GENERATION FAILED DURING ONBOARDING ===');
+      // print(e.toString());
+      // print(stackTrace); // pass stackTrace after e in params
+      // print('==============================================');
+    }
+
+    // 3. Remove the loading overlay
+    if (mounted) Navigator.pop(context);
+
+    // 4. Save the profile and trigger the routing gatekeeper to the Dashboard!
     final currentLocale = ref.read(userProfileProvider).appLocale;
     final newProfile = UserProfile(
       hasOnboarded: true,
-      appLocale: currentLocale, // Keeps the language they selected on Page 1
+      appLocale: currentLocale,
       gender: _gender,
       goal: _goal,
       experienceLevel: _experience,
       heightCm: _height,
       weightKg: _weight,
+      aiCredits: 3, // Initialize their credits
+      isPro: false,
+      customApiKey: '',
+      customModelName: '',
     );
-
     await ref.read(userProfileProvider.notifier).saveProfile(newProfile);
   }
 
