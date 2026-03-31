@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workout_minds/presentation/welcome_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 
@@ -286,6 +291,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onChanged: (value) => _saveProSettings(profile, isPro: value),
             ),
           ),
+
+          // --- CLOUD SYNC ---
+          // --- CLOUD SYNC (Hidden on Windows/Web) ---
+          if (!kIsWeb && !Platform.isWindows) ...[
+            const Padding(
+              padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+              child: Text(
+                'Cloud Backup',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            Card(
+              elevation: 0,
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withAlpha(100),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.cloud_upload, color: Colors.blue),
+                    title: const Text(
+                      'Backup to Google Drive',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () {
+                      final profileJsonString = jsonEncode(profile.toJson());
+
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false, // Force them to wait!
+                        builder: (context) => SyncProgressDialog(
+                          isBackup: true,
+                          profileJson: profileJsonString,
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.cloud_download,
+                      color: Colors.green,
+                    ),
+                    title: const Text(
+                      'Restore from Cloud',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false, // Force them to wait!
+                        builder: (context) =>
+                            const SyncProgressDialog(isBackup: false),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          const SizedBox(height: 24),
 
           // --- Power User (BYOK) Section (Only visible if Pro) ---
           if (profile.isPro) ...[
@@ -574,7 +645,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       // ref.invalidate(workoutsStreamProvider); // Add this if needed
 
                       if (!context.mounted) return;
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      // Navigator.of(context).popUntil((route) => route.isFirst);
+                      // FIX: Explicitly route to the Welcome Screen and destroy the back-history!
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const WelcomeScreen(),
+                        ),
+                        (route) => false,
+                      );
                     }
                   : null,
               child: const Text('ERASE EVERYTHING'),
@@ -622,6 +700,133 @@ class _SettingsTile extends StatelessWidget {
         ),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+// --- NEW SMART DIALOG ---
+class SyncProgressDialog extends ConsumerStatefulWidget {
+  final bool isBackup;
+  final String? profileJson;
+
+  const SyncProgressDialog({
+    super.key,
+    required this.isBackup,
+    this.profileJson,
+  });
+
+  @override
+  ConsumerState<SyncProgressDialog> createState() => _SyncProgressDialogState();
+}
+
+class _SyncProgressDialogState extends ConsumerState<SyncProgressDialog> {
+  String _status = 'Starting...';
+  bool _isProcessing = true;
+  bool _isSuccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startSync();
+  }
+
+  Future<void> _startSync() async {
+    final syncService = ref.read(driveSyncProvider);
+
+    // Give UI a split second to render the dialog before locking the thread
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (widget.isBackup) {
+      // --- RUN BACKUP ---
+      final success = await syncService.backupToCloud(
+        widget.profileJson!,
+        onStatus: (msg) {
+          if (mounted) setState(() => _status = msg);
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _isSuccess = success;
+          if (!success && _status == 'Starting...') _status = 'Backup Failed.';
+        });
+      }
+    } else {
+      // --- RUN RESTORE ---
+      final restoredJson = await syncService.restoreFromCloud(
+        onStatus: (msg) {
+          if (mounted) setState(() => _status = msg);
+        },
+      );
+
+      if (mounted) {
+        if (restoredJson != null) {
+          // Process the Riverpod state updates inside the dialog!
+          final restoredProfile = UserProfile.fromJson(
+            jsonDecode(restoredJson),
+          );
+          await ref
+              .read(userProfileProvider.notifier)
+              .saveProfile(restoredProfile);
+
+          ref.invalidate(databaseProvider);
+          ref.invalidate(weeklyStatsProvider);
+          ref.invalidate(recentWorkoutsProvider);
+          ref.invalidate(workoutsStreamProvider);
+
+          setState(() {
+            _isProcessing = false;
+            _isSuccess = true;
+            _status = 'Restore Complete!';
+          });
+        } else {
+          setState(() {
+            _isProcessing = false;
+            _isSuccess = false;
+            if (_status == 'Starting...') _status = 'Restore Failed.';
+          });
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.isBackup ? 'Cloud Backup' : 'Cloud Restore'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isProcessing)
+            const LinearProgressIndicator()
+          else if (_isSuccess)
+            const Icon(Icons.check_circle, color: Colors.green, size: 64)
+          else
+            const Icon(Icons.error, color: Colors.redAccent, size: 64),
+
+          const SizedBox(height: 24),
+          Text(
+            _status,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: _isProcessing ? FontWeight.normal : FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        // The button is strictly hidden until processing finishes!
+        if (!_isProcessing)
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ),
+      ],
     );
   }
 }

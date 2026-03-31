@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
+import 'package:workout_minds/services/drive_sync_service.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
 import 'ai_workout_repository.dart';
 
@@ -13,6 +14,11 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(() => db.close());
   return db;
+});
+
+// Put this provider near your databaseProvider
+final driveSyncProvider = Provider<DriveSyncService>((ref) {
+  return DriveSyncService();
 });
 
 // Updated Vertex AI Model Provider using AppConstants

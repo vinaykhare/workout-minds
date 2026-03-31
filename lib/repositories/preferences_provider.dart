@@ -70,6 +70,39 @@ class UserProfile {
       customModelName: customModelName ?? this.customModelName,
     );
   }
+
+  // 1. Convert the object to a JSON Map
+  Map<String, dynamic> toJson() {
+    return {
+      'appLocale': appLocale,
+      'gender': gender,
+      'goal': goal,
+      'experienceLevel': experienceLevel,
+      'heightCm': heightCm,
+      'weightKg': weightKg,
+      'aiCredits': aiCredits,
+      'isPro': isPro,
+      'customApiKey': customApiKey,
+      'customModelName': customModelName,
+    };
+  }
+
+  // 2. Rebuild the object from a JSON Map
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      hasOnboarded: true, // If restoring, they bypass onboarding!
+      appLocale: json['appLocale'] as String? ?? 'en',
+      gender: json['gender'] as String? ?? '',
+      goal: json['goal'] as String? ?? '',
+      experienceLevel: json['experienceLevel'] as String? ?? '',
+      heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0.0,
+      weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0.0,
+      aiCredits: json['aiCredits'] as int? ?? 3,
+      isPro: json['isPro'] as bool? ?? false,
+      customApiKey: json['customApiKey'] as String? ?? '',
+      customModelName: json['customModelName'] as String? ?? '',
+    );
+  }
 }
 
 // 3. The State Notifier to manage saving/loading

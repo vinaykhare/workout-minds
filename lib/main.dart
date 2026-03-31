@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
-import 'package:workout_minds/presentation/onboarding_screen.dart';
+import 'package:workout_minds/presentation/welcome_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
@@ -71,7 +71,7 @@ class WorkoutMindsApp extends ConsumerWidget {
       ),
       home: userProfile.hasOnboarded
           ? const DashboardScreen()
-          : const OnboardingScreen(),
+          : const WelcomeScreen(),
     );
   }
 }

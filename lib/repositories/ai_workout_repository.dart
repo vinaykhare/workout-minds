@@ -112,7 +112,14 @@ class AIWorkoutRepository {
     // 4. Final Structured Output
     if (response.text != null) {
       try {
-        // 1. FIX: Decode as a Map, not a List!
+        // Strip out any markdown formatting the AI might have accidentally added
+        String cleanJson = response.text!;
+        cleanJson = cleanJson
+            .replaceAll('```json', '')
+            .replaceAll('```', '')
+            .trim();
+
+        // FIX: Decode as a Map, not a List!
         final Map<String, dynamic> decodedMap = jsonDecode(response.text!);
 
         // 2. Extract the generated title and the exercises list

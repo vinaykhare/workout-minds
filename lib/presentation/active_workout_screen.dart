@@ -130,7 +130,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           }
           final extras = snapshot.data!.extras ?? {};
           final stateType = extras['stateType'] as String? ?? 'intro';
-          final title = snapshot.data!.title;
+          // final title = snapshot.data!.title;
           final exName = extras['exName'] as String? ?? '';
           final timerValue = extras['timerValue'] as int? ?? 0;
           final reps = extras['reps'] as String?;
@@ -204,14 +204,22 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                       color: Colors.blue,
                                     ),
                                     const SizedBox(height: 24),
-                                    Text(
-                                      title,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                                    StreamBuilder<MediaItem?>(
+                                      stream: handler.mediaItem,
+                                      builder: (context, snapshot) {
+                                        final workoutTitle =
+                                            snapshot.data?.album ??
+                                            'Active Workout';
+                                        return Text(
+                                          workoutTitle,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ] else if (isExercise) ...[
                                     Text(
@@ -250,18 +258,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                               imageUrl,
                                             ),
                                           ),
-                                          child:
-                                              _getDecorationImage(
-                                                    localImagePath,
-                                                    imageUrl,
-                                                  ) ==
-                                                  null
-                                              ? const Icon(
-                                                  Icons.fitness_center,
-                                                  size: 64,
-                                                  color: Colors.grey,
-                                                )
-                                              : null,
+                                          child: null,
                                         ),
                                       ),
                                     ),
@@ -540,15 +537,31 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                               color: Colors.blue,
                             ),
                             const SizedBox(height: 24),
-                            Text(
-                              title,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                            StreamBuilder<MediaItem?>(
+                              stream: handler.mediaItem,
+                              builder: (context, snapshot) {
+                                final workoutTitle =
+                                    snapshot.data?.album ?? 'Active Workout';
+                                return Text(
+                                  workoutTitle,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
                             ),
+                            // Text(
+                            //   title,
+                            //   textAlign: TextAlign.center,
+                            //   style: const TextStyle(
+                            //     fontSize: 32,
+                            //     fontWeight: FontWeight.bold,
+                            //     color: Colors.white,
+                            //   ),
+                            // ),
                             const SizedBox(height: 16),
                             const Text(
                               "Workout Started.\nLet's crush it!",
@@ -576,18 +589,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                         imageUrl,
                                       ),
                                     ),
-                                    child:
-                                        _getDecorationImage(
-                                              localImagePath,
-                                              imageUrl,
-                                            ) ==
-                                            null
-                                        ? const Icon(
-                                            Icons.fitness_center,
-                                            size: 64,
-                                            color: Colors.grey,
-                                          )
-                                        : null,
+                                    child: null,
                                   ),
                                 ),
                               )
@@ -833,14 +835,18 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     );
   }
 
-  DecorationImage? _getDecorationImage(String? local, String? network) {
+  DecorationImage _getDecorationImage(String? local, String? network) {
     if (local != null && local.isNotEmpty) {
       return DecorationImage(image: FileImage(File(local)), fit: BoxFit.cover);
     }
     if (network != null && network.isNotEmpty) {
       return DecorationImage(image: NetworkImage(network), fit: BoxFit.cover);
     }
-    return null;
+    // FIX: Always return a high-quality default image if nothing else exists!
+    return const DecorationImage(
+      image: AssetImage('assets/images/default_workout.jpg'),
+      fit: BoxFit.cover,
+    );
   }
 
   Widget _targetBadge(String text, BuildContext context) {
