@@ -90,25 +90,28 @@ class DriveSyncService {
     return null;
   }
 
+  // --- NEW HELPER: Upload any file ---
   Future<void> _uploadFile(
     drive.DriveApi driveApi,
     File localFile,
     String cloudName,
   ) async {
-    final existingId = await _getExistingBackupFileId(driveApi, cloudName);
+    final fileList = await driveApi.files.list(
+      spaces: 'appDataFolder',
+      q: "name = '$cloudName'",
+    );
+    final existingId = fileList.files?.firstOrNull?.id;
     final media = drive.Media(localFile.openRead(), localFile.lengthSync());
 
     if (existingId != null) {
-      // FIX: For an UPDATE request, Google forbids the 'parents' field!
+      // FIX: Do NOT send the parents field on an update request!
       final fileToUpdate = drive.File()..name = cloudName;
-
       await driveApi.files.update(fileToUpdate, existingId, uploadMedia: media);
     } else {
-      // For a CREATE request, we must specify the hidden folder.
+      // CREATE: Must specify the hidden appDataFolder!
       final fileToCreate = drive.File()
         ..name = cloudName
         ..parents = ['appDataFolder'];
-
       await driveApi.files.create(fileToCreate, uploadMedia: media);
     }
   }

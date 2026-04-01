@@ -47,8 +47,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     if (!mounted) return;
 
     if (restoredJson != null) {
-      // 1. Rebuild and save the profile
-      final restoredProfile = UserProfile.fromJson(jsonDecode(restoredJson));
+      // 1. Rebuild and save the profile (Force Auto-Sync ON since they linked Drive!)
+      final restoredProfile = UserProfile.fromJson(
+        jsonDecode(restoredJson),
+      ).copyWith(isAutoSyncEnabled: true);
       await ref.read(userProfileProvider.notifier).saveProfile(restoredProfile);
 
       // 2. Refresh the UI database connections
@@ -78,51 +80,57 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Force them to answer!
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Welcome Back! 🎉'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'We successfully restored your workout history. Weight can change over time; are you still:',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '${currentWeight.toInt()} kg',
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => Consumer(
+          // <-- NEW: Grab a living 'ref' for the dialog!
+          builder: (context, ref, child) => AlertDialog(
+            title: const Text('Welcome Back! 🎉'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'We successfully restored your workout history. Weight can change over time; are you still:',
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              Slider(
-                value: currentWeight,
-                min: 40,
-                max: 150,
-                onChanged: (val) => setState(() => currentWeight = val),
+                const SizedBox(height: 16),
+                Text(
+                  '${currentWeight.toInt()} kg',
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                Slider(
+                  value: currentWeight,
+                  min: 40,
+                  max: 150,
+                  onChanged: (val) => setState(() => currentWeight = val),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    // Use the fresh ref to update the weight
+                    await ref
+                        .read(userProfileProvider.notifier)
+                        .updateField('weightKg', currentWeight);
+
+                    if (dialogContext.mounted) {
+                      // Do NOT push a new route! The Dashboard is already behind this dialog.
+                      // Just pop the dialog and you are home!
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: const Text('Looks Good!'),
+                ),
               ),
             ],
           ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () async {
-                  // Save updated weight and go to Dashboard
-                  await ref
-                      .read(userProfileProvider.notifier)
-                      .updateField('weightKg', currentWeight);
-                  if (context.mounted) {
-                    Navigator.of(context).pushReplacementNamed('/');
-                  }
-                },
-                child: const Text('Looks Good!'),
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -50,6 +50,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       isPro: false,
       customApiKey: '',
       customModelName: '',
+      isAutoSyncEnabled: false,
     );
     await ref.read(userProfileProvider.notifier).saveProfile(newProfile);
 

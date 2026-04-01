@@ -2,8 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audio_service/audio_service.dart';
-import '../repositories/providers.dart';
-import '../services/workout_audio_handler.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
+import 'package:workout_minds/repositories/providers.dart';
+import 'dart:convert';
+
+import 'package:workout_minds/services/workout_audio_handler.dart'; // Ensure dart:convert is imported at the top of the file!
 
 class ActiveWorkoutScreen extends ConsumerStatefulWidget {
   const ActiveWorkoutScreen({super.key});
@@ -83,6 +86,14 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
       if (isComplete && mounted) {
         await db.logWorkoutCompletion(handler.currentWorkoutId!, 100);
         ref.invalidate(weeklyStatsProvider);
+
+        // --- NEW: EVENT-DRIVEN CLOUD SYNC ---
+        final profile = ref.read(userProfileProvider);
+        if (profile.isAutoSyncEnabled) {
+          final profileJsonString = jsonEncode(profile.toJson());
+          // Fire and forget! We don't await this, we just let it run silently in the background
+          ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
+        }
       }
     });
 

@@ -313,6 +313,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ).colorScheme.surfaceContainerHighest.withAlpha(100),
               child: Column(
                 children: [
+                  // --- NEW AUTO-SYNC TOGGLE ---
+                  SwitchListTile(
+                    secondary: const Icon(Icons.sync, color: Colors.tealAccent),
+                    title: const Text(
+                      'Auto-Sync Workouts',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'Silently backs up when you finish a workout.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    value: profile.isAutoSyncEnabled,
+                    activeThumbColor: Colors.tealAccent,
+                    onChanged: (value) async {
+                      if (value == true) {
+                        // If turning ON, do a quick silent backup to ensure auth works
+                        final profileJsonString = jsonEncode(
+                          profile.copyWith(isAutoSyncEnabled: true).toJson(),
+                        );
+                        final success = await ref
+                            .read(driveSyncProvider)
+                            .backupToCloud(profileJsonString);
+
+                        if (!mounted) return; // 1st Safe Check
+
+                        if (success) {
+                          await ref
+                              .read(userProfileProvider.notifier)
+                              .updateField('isAutoSyncEnabled', true);
+
+                          if (!context.mounted) return; // 2nd Safe Check
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Auto-Sync Enabled!',
+                                style: TextStyle(color: Colors.green),
+                              ),
+                            ),
+                          );
+                        } else {
+                          if (!context.mounted) return; // 2nd Safe Check
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Could not enable Auto-Sync. Auth failed.',
+                              ),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      } else {
+                        // Turning OFF
+                        await ref
+                            .read(userProfileProvider.notifier)
+                            .updateField('isAutoSyncEnabled', false);
+                      }
+                    },
+                  ),
+                  const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.cloud_upload, color: Colors.blue),
                     title: const Text(

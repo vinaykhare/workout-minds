@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/presentation/dashboard_controller.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -71,50 +73,30 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
   }
 
   // DIALOG 1: Title Only
+  // DIALOG 1: Title Edit (Now with Smart Search!)
   Future<void> _showTitleDialog(
     BuildContext context,
     int index,
     DraftExercise ex,
     WorkoutDraftNotifier notifier,
   ) async {
-    final nameController = TextEditingController(text: ex.name);
-    nameController.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: nameController.text.length,
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _ExerciseSearchDialog(initialName: ex.name),
     );
 
-    await showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Rename Exercise'),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Exercise Name',
-            border: OutlineInputBorder(),
-          ),
+    if (result != null && result['name'] != null) {
+      notifier.updateExercise(
+        index,
+        ex.copyWith(
+          name: result['name'],
+          // If they picked an existing DB exercise, copy its image over!
+          // If they just typed a custom name, keep the current image they had.
+          imageUrl: result['imageUrl'] ?? ex.imageUrl,
+          localImagePath: result['localImagePath'] ?? ex.localImagePath,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.trim().isNotEmpty) {
-                notifier.updateExercise(
-                  index,
-                  ex.copyWith(name: nameController.text.trim()),
-                );
-              }
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
+      );
+    }
   }
 
   // DIALOG 2: Image Source Only
@@ -301,9 +283,12 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
           final draftEx = draftExercises[i];
           int exerciseId;
 
-          final existingEx = await (db.select(
-            db.exercises,
-          )..where((t) => t.name.equals(draftEx.name))).getSingleOrNull();
+          final existingEx =
+              await (db.select(db.exercises)
+                    ..where((t) => t.name.equals(draftEx.name))
+                    ..limit(1) // <--- DO NOT FORGET THIS LINE!
+                    )
+                  .getSingleOrNull();
 
           if (existingEx != null) {
             exerciseId = existingEx.id;
@@ -353,6 +338,13 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
               );
         }
       });
+      // EVENT-DRIVEN CLOUD SYNC ---
+      final profile = ref.read(userProfileProvider);
+      if (profile.isAutoSyncEnabled) {
+        final profileJsonString = jsonEncode(profile.toJson());
+        // Fire and forget! Silently back up the newly created workout.
+        ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
+      }
 
       if (!mounted) return;
 
@@ -706,11 +698,23 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // FIX: Uses the current list length to auto-increment the name
-          notifier.addExercise(
-            DraftExercise(name: "Exercise ${draftExercises.length + 1}"),
+        onPressed: () async {
+          // FIX: Open the smart search dialog with a blank query!
+          final result = await showDialog<Map<String, dynamic>>(
+            context: context,
+            builder: (context) => const _ExerciseSearchDialog(initialName: ''),
           );
+
+          // If they selected or typed a valid name, add it to the list!
+          if (result != null && result['name'] != null) {
+            notifier.addExercise(
+              DraftExercise(
+                name: result['name'],
+                imageUrl: result['imageUrl'],
+                localImagePath: result['localImagePath'],
+              ),
+            );
+          }
         },
         icon: const Icon(Icons.add),
         label: const Text('Add Exercise'),
@@ -914,6 +918,193 @@ class _SwitchInputRow extends StatelessWidget {
             child: Switch(value: value, onChanged: onChanged),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// --- NEW: SMART EXERCISE SEARCH DIALOG ---
+class _ExerciseSearchDialog extends ConsumerStatefulWidget {
+  final String initialName;
+
+  const _ExerciseSearchDialog({required this.initialName});
+
+  @override
+  ConsumerState<_ExerciseSearchDialog> createState() =>
+      _ExerciseSearchDialogState();
+}
+
+class _ExerciseSearchDialogState extends ConsumerState<_ExerciseSearchDialog> {
+  late TextEditingController _controller;
+  List<dynamic> _suggestions = []; // Will hold Drift Exercise objects
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+
+    // Auto-select text if editing an existing name
+    if (widget.initialName.isNotEmpty) {
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.initialName.length,
+      );
+      _search(_controller.text);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String query) async {
+    if (query.trim().isEmpty) {
+      if (mounted) setState(() => _suggestions = []);
+      return;
+    }
+
+    if (mounted) setState(() => _isLoading = true);
+    final db = ref.read(databaseProvider);
+
+    // Query the database for exercises matching the typed text
+    final results =
+        await (db.select(db.exercises)
+              ..where((t) => t.name.like('%${query.trim()}%'))
+              ..limit(10))
+            .get();
+
+    if (mounted) {
+      setState(() {
+        _suggestions = results;
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Helper to safely get the image provider
+  ImageProvider? _getImageProvider(String? localPath, String? networkUrl) {
+    if (localPath != null && localPath.isNotEmpty) {
+      return FileImage(File(localPath));
+    }
+    if (networkUrl != null && networkUrl.isNotEmpty) {
+      return NetworkImage(networkUrl);
+    }
+    return null;
+  }
+
+  void _submitCustom() {
+    if (_controller.text.trim().isNotEmpty) {
+      // Return a completely new exercise name
+      Navigator.pop(context, {
+        'name': _controller.text.trim(),
+        'imageUrl': null,
+        'localImagePath': null,
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 500),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // SEARCH BAR
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Type exercise name...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(
+                    Icons.check_circle,
+                    color: Colors.blueAccent,
+                  ),
+                  onPressed: _submitCustom, // Submit custom typed name
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onChanged: _search,
+              onSubmitted: (_) => _submitCustom(),
+            ),
+            const SizedBox(height: 16),
+
+            // RESULTS LIST
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _suggestions.isEmpty && _controller.text.isNotEmpty
+                  ? Center(
+                      child: Text(
+                        'No matches found.\nTap the checkmark to create "${_controller.text.trim()}"',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _suggestions.length,
+                      itemBuilder: (context, index) {
+                        final ex = _suggestions[index];
+                        final imgProvider = _getImageProvider(
+                          ex.localImagePath,
+                          ex.imageUrl,
+                        );
+
+                        return ListTile(
+                          leading: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                              image: imgProvider != null
+                                  ? DecorationImage(
+                                      image: imgProvider,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: imgProvider == null
+                                ? const Icon(
+                                    Icons.fitness_center,
+                                    color: Colors.grey,
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            ex.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            ex.muscleGroup ?? 'Global Database',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onTap: () {
+                            // Return the selected database exercise!
+                            Navigator.pop(context, {
+                              'name': ex.name,
+                              'imageUrl': ex.imageUrl,
+                              'localImagePath': ex.localImagePath,
+                            });
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

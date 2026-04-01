@@ -47,6 +47,7 @@ dev_dependencies:
   drift_dev: ^2.20.0
   riverpod_generator: ^2.6.0
   json_serializable: ^6.9.0
+  flutter_launcher_icons: ^0.14.4
 
   # Advanced Integration Testing
   patrol: ^4.3.0 # Required for testing background notifications and audio
@@ -56,3 +57,4 @@ flutter:
   assets:
     - .env
     - assets/images/default_workout.jpg
+    - assets/images/app_logo.png

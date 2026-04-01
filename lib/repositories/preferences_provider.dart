@@ -21,6 +21,7 @@ class UserProfile {
   final bool isPro;
   final String customApiKey;
   final String customModelName;
+  final bool isAutoSyncEnabled;
 
   UserProfile({
     required this.hasOnboarded,
@@ -34,6 +35,7 @@ class UserProfile {
     required this.isPro,
     required this.customApiKey,
     required this.customModelName,
+    required this.isAutoSyncEnabled,
   });
 
   // Automatically calculates BMI on the fly!
@@ -55,6 +57,7 @@ class UserProfile {
     bool? isPro,
     String? customApiKey,
     String? customModelName,
+    bool? isAutoSyncEnabled,
   }) {
     return UserProfile(
       hasOnboarded: hasOnboarded ?? this.hasOnboarded,
@@ -68,6 +71,7 @@ class UserProfile {
       isPro: isPro ?? this.isPro,
       customApiKey: this.customApiKey,
       customModelName: customModelName ?? this.customModelName,
+      isAutoSyncEnabled: isAutoSyncEnabled ?? this.isAutoSyncEnabled,
     );
   }
 
@@ -84,6 +88,7 @@ class UserProfile {
       'isPro': isPro,
       'customApiKey': customApiKey,
       'customModelName': customModelName,
+      'isAutoSyncEnabled': isAutoSyncEnabled,
     };
   }
 
@@ -101,6 +106,7 @@ class UserProfile {
       isPro: json['isPro'] as bool? ?? false,
       customApiKey: json['customApiKey'] as String? ?? '',
       customModelName: json['customModelName'] as String? ?? '',
+      isAutoSyncEnabled: json['isAutoSyncEnabled'] as bool? ?? false,
     );
   }
 }
@@ -125,6 +131,7 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
       isPro: prefs.getBool('isPro') ?? false,
       customApiKey: prefs.getString('customApiKey') ?? '',
       customModelName: prefs.getString('customModelName') ?? '',
+      isAutoSyncEnabled: prefs.getBool('isAutoSyncEnabled') ?? false,
     );
   }
 
@@ -141,6 +148,7 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
     await prefs.setBool('isPro', newProfile.isPro);
     await prefs.setString('customApiKey', newProfile.customApiKey);
     await prefs.setString('customModelName', newProfile.customModelName);
+    await prefs.setBool('isAutoSyncEnabled', newProfile.isAutoSyncEnabled);
     // Update the state so the UI reacts instantly
     state = newProfile.copyWith(hasOnboarded: true);
   }

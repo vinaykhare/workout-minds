@@ -154,16 +154,36 @@ class AIWorkoutRepository {
               parsedImageUrl = null;
             }
 
-            final exId = await _db
-                .into(_db.exercises)
-                .insertOnConflictUpdate(
-                  ExercisesCompanion(
-                    name: Value(item['exercise_name'] as String),
-                    muscleGroup: Value(item['muscle_group'] as String),
-                    imageUrl: Value(parsedImageUrl),
-                  ),
-                );
+            // FIX 1: Extract the string safely from the JSON Map!
+            final String exerciseName = item['exercise_name'] as String;
 
+            int exId;
+
+            // 1. Does it already exist in our global dictionary?
+            final existingExercise =
+                await (_db.select(_db.exercises)
+                      ..where(
+                        (t) => t.name.equals(exerciseName),
+                      ) // <-- Use the safely extracted string
+                      ..limit(1))
+                    .getSingleOrNull();
+
+            if (existingExercise != null) {
+              // AWESOME! Use the existing one so they keep their custom images!
+              exId = existingExercise.id;
+            } else {
+              // FIX 2: Use standard insert (insertOnConflictUpdate can act weird without UNIQUE constraints)
+              exId = await _db
+                  .into(_db.exercises)
+                  .insert(
+                    ExercisesCompanion.insert(
+                      name: exerciseName, // <-- Use the safely extracted string
+                      muscleGroup: item['muscle_group'] as String,
+                      isCustom: const Value(false),
+                      imageUrl: Value(parsedImageUrl),
+                    ),
+                  );
+            }
             await _db
                 .into(_db.workoutExercises)
                 .insert(
