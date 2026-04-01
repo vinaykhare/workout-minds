@@ -29,7 +29,7 @@ dependencies:
   just_audio: ^0.10.5 # Optional: for metronome or sound effects
   # Data Viz & Sharing
   fl_chart: ^1.2.0 # Statistics dashboard
-  share_plus: ^12.0.1 # JSON workout export
+  share_plus: ^12.0.2 # JSON workout export
   json_annotation: ^4.9.0
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
@@ -38,6 +38,8 @@ dependencies:
   google_sign_in: ^7.2.0
   googleapis: ^16.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
+  file_picker: ^10.3.10
+  receive_sharing_intent: ^1.8.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

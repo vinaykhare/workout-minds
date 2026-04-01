@@ -328,7 +328,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     activeThumbColor: Colors.tealAccent,
                     onChanged: (value) async {
                       if (value == true) {
-                        // If turning ON, do a quick silent backup to ensure auth works
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) =>
+                              const Center(child: CircularProgressIndicator()),
+                        );
+
+                        // Run the silent backup to ensure auth works
                         final profileJsonString = jsonEncode(
                           profile.copyWith(isAutoSyncEnabled: true).toJson(),
                         );
@@ -336,14 +343,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             .read(driveSyncProvider)
                             .backupToCloud(profileJsonString);
 
-                        if (!mounted) return; // 1st Safe Check
+                        // FIX 1: Explicitly check context.mounted
+                        if (!context.mounted) return;
+
+                        Navigator.pop(context); // Close the loader
 
                         if (success) {
                           await ref
                               .read(userProfileProvider.notifier)
                               .updateField('isAutoSyncEnabled', true);
 
-                          if (!context.mounted) return; // 2nd Safe Check
+                          // FIX 2: Explicitly check context.mounted
+                          if (!context.mounted) return;
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -354,7 +365,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                           );
                         } else {
-                          if (!context.mounted) return; // 2nd Safe Check
+                          // FIX 3: Explicitly check context.mounted
+                          if (!context.mounted) return;
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -610,18 +623,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     Function(String) onSave,
   ) {
     String tempValue = currentValue; // Track the local state
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text('Update $title'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: options
-                .map(
-                  (opt) => RadioListTile<String>(title: Text(opt), value: opt),
-                )
-                .toList(),
+          // FIX: The new Flutter 3.32+ RadioGroup Wrapper!
+          content: RadioGroup<String>(
+            groupValue: tempValue,
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => tempValue = val);
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: options
+                  .map(
+                    (opt) => RadioListTile<String>(
+                      title: Text(opt),
+                      value: opt,
+                      // Notice how groupValue and onChanged are completely gone from here!
+                    ),
+                  )
+                  .toList(),
+            ),
           ),
           actions: [
             TextButton(
