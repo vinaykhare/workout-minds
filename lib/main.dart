@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/data/local/database.dart';
+import 'package:workout_minds/presentation/dashboard_controller.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
 import 'package:workout_minds/presentation/welcome_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
@@ -23,8 +26,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 1. Initialize SharedPreferences before the app starts
   final prefs = await SharedPreferences.getInstance();
-  // // Just for Testing
-  // await prefs.setBool('hasOnboarded', false);
 
   // Initialize the Background Audio Service
   final audioHandler = await AudioService.init(
@@ -52,13 +53,90 @@ Future<void> main() async {
   );
 }
 
-class WorkoutMindsApp extends ConsumerWidget {
+// FIX 1: Converted to ConsumerStatefulWidget to allow intent listeners
+class WorkoutMindsApp extends ConsumerStatefulWidget {
   const WorkoutMindsApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkoutMindsApp> createState() => _WorkoutMindsAppState();
+}
+
+class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
+  late StreamSubscription _intentDataStreamSubscription;
+
+  // FIX 2: Global key to show SnackBars safely from background processes!
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 1. App is already running in background, user taps a file
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance
+        .getMediaStream()
+        .listen(
+          (List<SharedMediaFile> value) {
+            _handleSharedFile(value);
+          },
+          onError: (err) {
+            debugPrint("getIntentDataStream error: $err");
+          },
+        );
+
+    // 2. App is completely closed, user taps a file and launches it
+    ReceiveSharingIntent.instance.getInitialMedia().then((
+      List<SharedMediaFile> value,
+    ) {
+      _handleSharedFile(value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _intentDataStreamSubscription.cancel();
+    super.dispose();
+  }
+
+  void _handleSharedFile(List<SharedMediaFile> files) async {
+    if (files.isNotEmpty) {
+      final path = files.first.path;
+      if (path.endsWith('.wmind')) {
+        final result = await ref
+            .read(workoutShareProvider)
+            .importFromFilePath(path);
+
+        if (result == "Success") {
+          ref.invalidate(dashboardControllerProvider);
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Workout Imported Successfully!',
+                style: TextStyle(color: Colors.green),
+              ),
+            ),
+          );
+        } else {
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            const SnackBar(
+              content: Text('Workout Minds cannot read this file.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+
+        // Tell the OS we handled it
+        ReceiveSharingIntent.instance.reset();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider);
     return MaterialApp(
+      scaffoldMessengerKey:
+          _scaffoldMessengerKey, // FIX 3: Attach the key to MaterialApp!
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       locale: Locale(userProfile.appLocale),
       localizationsDelegates: AppLocalizations.localizationsDelegates,

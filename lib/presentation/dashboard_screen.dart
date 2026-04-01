@@ -7,6 +7,7 @@ import 'package:workout_minds/presentation/widgets/recent_workouts_section.dart'
 import 'package:workout_minds/presentation/widgets/weekly_progress_card.dart';
 import 'package:workout_minds/presentation/widgets/workout_list_section.dart';
 import 'package:workout_minds/presentation/workout_builder/workout_builder_screen.dart';
+import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -56,6 +57,37 @@ class DashboardScreen extends ConsumerWidget {
             icon: const Icon(Icons.auto_awesome),
             tooltip: l10n.aiGenerate,
             onPressed: () => _showAiGenerator(context, ref),
+          ),
+          IconButton(
+            icon: const Icon(Icons.import_export),
+            tooltip: 'Import Workout',
+            onPressed: () async {
+              final result = await ref
+                  .read(workoutShareProvider)
+                  .pickAndImportWorkout();
+              if (result != null && context.mounted) {
+                if (result == "Success") {
+                  ref.invalidate(
+                    dashboardControllerProvider,
+                  ); // Refresh dashboard!
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Workout Imported!',
+                        style: TextStyle(color: Colors.green),
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
           ),
           // FIX: Added the Settings button!
           IconButton(

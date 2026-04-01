@@ -7,6 +7,7 @@ import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/services/drive_sync_service.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
+import 'package:workout_minds/services/workout_share_service.dart';
 import 'ai_workout_repository.dart';
 
 // The Database Provider
@@ -146,4 +147,9 @@ final weeklyStatsProvider = FutureProvider<List<FlSpot>>((ref) async {
 final recentWorkoutsProvider = FutureProvider<List<TypedResult>>((ref) async {
   final db = ref.read(databaseProvider);
   return await db.getRecentWorkoutLogsWithTitles(limit: 10);
+});
+
+final workoutShareProvider = Provider<WorkoutShareService>((ref) {
+  final db = ref.read(databaseProvider);
+  return WorkoutShareService(db);
 });

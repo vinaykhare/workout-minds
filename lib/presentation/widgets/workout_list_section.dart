@@ -73,6 +73,26 @@ class WorkoutListSection extends ConsumerWidget {
                       );
                     } else if (value == 'edit') {
                       _openEditorWithData(context, ref, workout);
+                    } else if (value == 'share') {
+                      final success = await ref
+                          .read(workoutShareProvider)
+                          .exportAndShare(workout.id);
+                      if (!success && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Export Failed')),
+                        );
+                      }
+                    } else if (value == 'download') {
+                      final success = await ref
+                          .read(workoutShareProvider)
+                          .saveToDisk(workout.id);
+                      if (success && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Workout saved to device!'),
+                          ),
+                        );
+                      }
                     }
                   },
                   itemBuilder: (context) => [
@@ -83,6 +103,26 @@ class WorkoutListSection extends ConsumerWidget {
                           Icon(Icons.edit, size: 20),
                           SizedBox(width: 8),
                           Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          Icon(Icons.ios_share, size: 20),
+                          SizedBox(width: 8),
+                          Text('Share'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'download',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download_rounded, size: 20),
+                          SizedBox(width: 8),
+                          Text('Download'),
                         ],
                       ),
                     ),

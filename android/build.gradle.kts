@@ -22,3 +22,26 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+// Force all plugins to sync on Java 17 safely
+subprojects {
+    // 1. Force Kotlin tasks to use JVM 17
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
+    // 2. Skip the ':app' module to prevent the "already evaluated" crash!
+    if (project.name == "app") return@subprojects
+
+    // 3. For all plugins, wait until THEY finish evaluating, then OVERWRITE their Java settings to 17
+    project.afterEvaluate {
+        extensions.findByType<com.android.build.gradle.LibraryExtension>()?.apply {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+    }
+}
