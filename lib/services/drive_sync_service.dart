@@ -1,13 +1,17 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-// This import powers the .authClient() extension method on line 53!
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+// FIX 2: Ensure Drift and the Database are imported!
+import 'package:drift/drift.dart';
+import 'package:workout_minds/data/local/database.dart';
 
 class DriveSyncService {
+  final AppDatabase _db;
+  DriveSyncService(this._db);
   // 1. Paste your newly created WEB Client ID right here!
   static const String _webClientId =
       '634732739534-u91a5bo2iujg8mcn5inhcpoahckmdegp.apps.googleusercontent.com';
@@ -156,7 +160,6 @@ class DriveSyncService {
     }
   }
 
-  /// BACKUP: Pushes SQLite DB and Profile JSON to Google Drive
   Future<bool> backupToCloud(
     String profileJson, {
     Function(String)? onStatus,
@@ -169,17 +172,131 @@ class DriveSyncService {
         return false;
       }
 
-      onStatus?.call('Locating local files...');
       final dbFolder = await getApplicationDocumentsDirectory();
-
-      // 1. Upload Database
       final localDbFile = File(p.join(dbFolder.path, 'workout_minds.sqlite'));
+
+      // --- SMART MERGE LOGIC ---
+      onStatus?.call('Checking for existing cloud backups...');
+      final cloudDbId = await _getExistingBackupFileId(driveApi, _backupDbName);
+
+      if (cloudDbId != null) {
+        onStatus?.call('Cloud backup found. Preparing merge...');
+
+        // 1. Export local workouts to memory
+        final localWorkouts = await _db.select(_db.workouts).get();
+        List<Map<String, dynamic>> localPayloads = [];
+
+        for (var w in localWorkouts) {
+          final mappings = await (_db.select(
+            _db.workoutExercises,
+          )..where((t) => t.workoutId.equals(w.id))).get();
+          List<Map<String, dynamic>> exList = [];
+          for (var map in mappings) {
+            final ex = await (_db.select(
+              _db.exercises,
+            )..where((t) => t.id.equals(map.exerciseId))).getSingle();
+            exList.add({
+              'name': ex.name,
+              'muscleGroup': ex.muscleGroup,
+              'imageUrl': ex.imageUrl,
+              'localImagePath': ex.localImagePath,
+              'targetSets': map.targetSets,
+              'targetReps': map.targetReps,
+              'targetDurationSeconds': map.targetDurationSeconds,
+              'restSecondsAfterSet': map.restSecondsAfterSet,
+              'restSecondsAfterExercise': map.restSecondsAfterExercise,
+              'orderIndex': map.orderIndex,
+            });
+          }
+          localPayloads.add({
+            'workout': {'title': w.title, 'difficultyLevel': w.difficultyLevel},
+            'exercises': exList,
+          });
+        }
+
+        // 2. Download Cloud DB (temporarily overwrites local file with cloud history)
+        onStatus?.call('Downloading cloud history...');
+        await _downloadFile(driveApi, _backupDbName, localDbFile);
+
+        // 3. Re-inject the new local workouts into the downloaded cloud DB
+        onStatus?.call('Merging new local workouts...');
+        await _db.transaction(() async {
+          for (var payload in localPayloads) {
+            final title = payload['workout']['title'];
+
+            // Check if this workout already exists in the cloud DB
+            final exists = await (_db.select(
+              _db.workouts,
+            )..where((t) => t.title.equals(title))).getSingleOrNull();
+
+            if (exists == null) {
+              // Insert the missing local workout into the DB
+              final newWorkoutId = await _db
+                  .into(_db.workouts)
+                  .insert(
+                    WorkoutsCompanion.insert(
+                      title: title,
+                      difficultyLevel:
+                          payload['workout']['difficultyLevel'] ?? 'Custom',
+                      aiGenerated: const Value(false),
+                    ),
+                  );
+
+              for (var exData in payload['exercises']) {
+                int exId;
+                final existingEx =
+                    await (_db.select(_db.exercises)
+                          ..where((t) => t.name.equals(exData['name']))
+                          ..limit(1))
+                        .getSingleOrNull();
+
+                if (existingEx != null) {
+                  exId = existingEx.id;
+                } else {
+                  exId = await _db
+                      .into(_db.exercises)
+                      .insert(
+                        ExercisesCompanion.insert(
+                          name: exData['name'],
+                          muscleGroup: exData['muscleGroup'] ?? 'Custom',
+                          imageUrl: Value(exData['imageUrl']),
+                          localImagePath: Value(exData['localImagePath']),
+                          isCustom: const Value(true),
+                        ),
+                      );
+                }
+
+                await _db
+                    .into(_db.workoutExercises)
+                    .insert(
+                      WorkoutExercisesCompanion.insert(
+                        workoutId: newWorkoutId,
+                        exerciseId: exId,
+                        orderIndex: exData['orderIndex'],
+                        targetSets: exData['targetSets'],
+                        targetReps: Value(exData['targetReps']),
+                        targetDurationSeconds: Value(
+                          exData['targetDurationSeconds'],
+                        ),
+                        restSecondsAfterSet:
+                            exData['restSecondsAfterSet'] ?? 60,
+                        restSecondsAfterExercise:
+                            exData['restSecondsAfterExercise'] ?? 90,
+                      ),
+                    );
+              }
+            }
+          }
+        });
+      }
+
+      // --- UPLOAD FINAL MERGED DB ---
       if (await localDbFile.exists()) {
-        onStatus?.call('Uploading Database...');
+        onStatus?.call('Uploading unified Database...');
         await _uploadFile(driveApi, localDbFile, _backupDbName);
       }
 
-      // 2. Upload Profile JSON
+      // 4. Upload Profile JSON
       onStatus?.call('Uploading Profile Data...');
       final tempDir = await getTemporaryDirectory();
       final localProfileFile = File(p.join(tempDir.path, 'temp_profile.json'));

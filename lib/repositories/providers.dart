@@ -17,9 +17,10 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-// Put this provider near your databaseProvider
+// FIX 1: Pass the active database into the Sync Service!
 final driveSyncProvider = Provider<DriveSyncService>((ref) {
-  return DriveSyncService();
+  final db = ref.read(databaseProvider);
+  return DriveSyncService(db);
 });
 
 // Updated Vertex AI Model Provider using AppConstants
@@ -153,3 +154,8 @@ final workoutShareProvider = Provider<WorkoutShareService>((ref) {
   final db = ref.read(databaseProvider);
   return WorkoutShareService(db);
 });
+
+// --- NEW: A global provider to hold files that arrive while the app is waking up! ---
+final pendingImportProvider = StateProvider<Map<String, dynamic>?>(
+  (ref) => null,
+);

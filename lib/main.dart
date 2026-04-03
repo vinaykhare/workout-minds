@@ -7,7 +7,6 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/data/local/database.dart';
-import 'package:workout_minds/presentation/dashboard_controller.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
 import 'package:workout_minds/presentation/welcome_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
@@ -37,6 +36,8 @@ Future<void> main() async {
       androidNotificationOngoing:
           true, // Prevents user from swiping away the active workout
       androidShowNotificationBadge: true,
+      // FIX: Explicitly tell Android to open the app UI when the notification is tapped
+      androidNotificationClickStartsActivity: true,
     ),
   );
 
@@ -53,7 +54,6 @@ Future<void> main() async {
   );
 }
 
-// FIX 1: Converted to ConsumerStatefulWidget to allow intent listeners
 class WorkoutMindsApp extends ConsumerStatefulWidget {
   const WorkoutMindsApp({super.key});
 
@@ -63,7 +63,6 @@ class WorkoutMindsApp extends ConsumerStatefulWidget {
 
 class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
   late StreamSubscription _intentDataStreamSubscription;
-
   // FIX 2: Global key to show SnackBars safely from background processes!
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
@@ -72,7 +71,6 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
   void initState() {
     super.initState();
 
-    // 1. App is already running in background, user taps a file
     _intentDataStreamSubscription = ReceiveSharingIntent.instance
         .getMediaStream()
         .listen(
@@ -84,7 +82,6 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
           },
         );
 
-    // 2. App is completely closed, user taps a file and launches it
     ReceiveSharingIntent.instance.getInitialMedia().then((
       List<SharedMediaFile> value,
     ) {
@@ -99,35 +96,26 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
   }
 
   void _handleSharedFile(List<SharedMediaFile> files) async {
-    if (files.isNotEmpty) {
-      final path = files.first.path;
-      if (path.endsWith('.wmind')) {
-        final result = await ref
-            .read(workoutShareProvider)
-            .importFromFilePath(path);
+    if (files.isEmpty) return;
 
-        if (result == "Success") {
-          ref.invalidate(dashboardControllerProvider);
-          _scaffoldMessengerKey.currentState?.showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Workout Imported Successfully!',
-                style: TextStyle(color: Colors.green),
-              ),
-            ),
-          );
-        } else {
-          _scaffoldMessengerKey.currentState?.showSnackBar(
-            const SnackBar(
-              content: Text('Workout Minds cannot read this file.'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
+    final path = files.first.path;
+    final shareService = ref.read(workoutShareProvider);
+    final workoutData = await shareService.parseWorkoutFile(path);
 
-        // Tell the OS we handled it
-        ReceiveSharingIntent.instance.reset();
-      }
+    if (workoutData != null) {
+      ReceiveSharingIntent.instance.reset(); // Clean up OS intent
+
+      // FIX 1: Instead of trying to force navigation on a frozen screen,
+      // we just tell Riverpod that a file is waiting to be opened!
+      ref.read(pendingImportProvider.notifier).state = workoutData;
+    } else {
+      ReceiveSharingIntent.instance.reset();
+      _scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Workout Minds cannot read this file.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 

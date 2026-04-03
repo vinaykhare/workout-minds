@@ -3,6 +3,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class WorkoutAudioHandler extends BaseAudioHandler {
+  int _workoutSessionId = 0; // NEW: Tracks the current async session
+  bool _isRestarting = false; // NEW: Flag to suppress abort signals
   final StreamController<bool> _workoutAbortedController =
       StreamController<bool>.broadcast();
   Stream<bool> get workoutAbortedStream => _workoutAbortedController.stream;
@@ -36,39 +38,39 @@ class WorkoutAudioHandler extends BaseAudioHandler {
 
   // --- 1. CORE STATE MANAGEMENT ---
 
-  // FIX: Added appLocale as the 4th positional argument!
   Future<void> startWorkoutSequence(
     List<Map<String, dynamic>> routine,
     String workoutTitle,
     int workoutId,
     String appLocale,
   ) async {
+    // 1. Increment the session ID immediately
+    _workoutSessionId++;
+    final int currentSession = _workoutSessionId;
+
     if (_isWorkoutActive) {
+      // FIX 1: Set the flag before stopping so it doesn't trigger a UI pop!
+      _isRestarting = true;
       await stop();
+      _isRestarting = false;
     }
 
     currentWorkoutId = workoutId;
     _routine = routine;
     _workoutTitle = workoutTitle;
-    _currentLanguage = appLocale; // Save the language choice!
+    _currentLanguage = appLocale;
     _currentIndex = 0;
     _currentSet = 1;
     _isWorkoutActive = true;
     _isProcessingAction = false;
     _isPaused = false;
 
-    // Switch the TTS Engine accent based on language
     if (_currentLanguage == 'hi') {
-      await flutterTts.setLanguage(
-        "en-IN",
-      ); // Indian English handles Roman Hindi best
+      await flutterTts.setLanguage("en-IN");
       List<dynamic> voices = await flutterTts.getVoices;
       for (var voice in voices) {
         final name = voice["name"].toString().toLowerCase();
         final locale = voice["locale"].toString();
-
-        // Windows Indian voices are usually named Heera or Ravi.
-        // Android voices usually contain 'en-in' or 'en_in'.
         if (locale.contains("en-in") ||
             locale.contains("en_in") ||
             name.contains("heera") ||
@@ -77,7 +79,7 @@ class WorkoutAudioHandler extends BaseAudioHandler {
             "name": voice["name"],
             "locale": voice["locale"],
           });
-          break; // Stop hunting once we find a good one
+          break;
         }
       }
     } else {
@@ -88,19 +90,28 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     _pushStateToUi();
 
     await flutterTts.stop();
+    await flutterTts.awaitSpeakCompletion(true);
 
-    // Dynamic Intro Speech
+    // 2. CHECK: If the user hit restart during setup, kill this old thread
+    if (currentSession != _workoutSessionId) return;
+
     final introSpeech = _currentLanguage == 'hi'
         ? "Workout shuru ho raha hai. Chalo shuru karein!"
         : "Workout Started. Let's crush it!";
+
     await flutterTts.speak(introSpeech);
 
-    _introTimer?.cancel();
-    _introTimer = Timer(const Duration(seconds: 3), () {
-      if (_isWorkoutActive && _currentScreenState == 'intro') {
-        _startExercisePhase();
-      }
-    });
+    // 3. CHECK: If the user hit restart during the speech, kill this old thread
+    if (currentSession != _workoutSessionId) return;
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    // 4. CHECK: If the user hit restart during the pause, kill this old thread
+    if (currentSession != _workoutSessionId) return;
+
+    if (_isWorkoutActive && _currentScreenState == 'intro') {
+      _startExercisePhase();
+    }
   }
 
   Future<void> _startExercisePhase() async {
@@ -332,7 +343,10 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       ),
     );
 
-    _workoutAbortedController.add(true);
+    // FIX 2: Only broadcast an abort if the user actually quit, NOT if they are just restarting!
+    if (!_isRestarting) {
+      _workoutAbortedController.add(true);
+    }
     return super.stop();
   }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:audio_service/audio_service.dart'; // NEW: For PlaybackState
 import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
@@ -11,7 +12,6 @@ class WorkoutDetailScreen extends ConsumerWidget {
 
   const WorkoutDetailScreen({super.key, required this.workout});
 
-  // FIX: Upgraded format time to exactly match the builder
   String _formatTime(int totalSeconds) {
     final int mins = totalSeconds ~/ 60;
     final int secs = totalSeconds % 60;
@@ -108,7 +108,6 @@ class WorkoutDetailScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                // FIX: Dynamic Subtitle for Reps/Time
                                 Text(
                                   isDuration
                                       ? '${details.targetSets} Sets x ${details.targetDurationSeconds}s'
@@ -145,7 +144,6 @@ class WorkoutDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  // FIX: The visual Rest Timer Arrow (Outside the card!)
                   if (!isLast && restNext > 0)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -177,45 +175,100 @@ class WorkoutDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final rows = detailsAsync.value;
-          if (rows == null || rows.isEmpty) return;
-
-          final routine = rows.map((row) {
-            final ex = row.readTable(ref.read(databaseProvider).exercises);
-            final details = row.readTable(
-              ref.read(databaseProvider).workoutExercises,
-            );
-            return {
-              'name': ex.name,
-              'sets': details.targetSets,
-              'reps': details.targetReps,
-              'durationSeconds': details.targetDurationSeconds,
-              'restSecondsSet': details.restSecondsAfterSet,
-              'restSecondsExercise': details.restSecondsAfterExercise,
-              'imageUrl': ex.imageUrl,
-              'localImagePath': ex.localImagePath,
-            };
-          }).toList();
-
+      // FIX 3: Dynamic FAB wrapping stream builder
+      floatingActionButton: StreamBuilder<PlaybackState>(
+        stream: ref.read(audioHandlerProvider).playbackState,
+        builder: (context, snapshot) {
           final handler = ref.read(audioHandlerProvider);
-          final appLocale = ref.read(userProfileProvider).appLocale;
-          handler.startWorkoutSequence(
-            routine,
-            workout.title,
-            workout.id,
-            appLocale,
-          );
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const ActiveWorkoutScreen(),
-            ),
+          final isPlayingSomething =
+              snapshot.data?.processingState != AudioProcessingState.idle;
+          final isActive =
+              isPlayingSomething && handler.currentWorkoutId == workout.id;
+
+          return FloatingActionButton.extended(
+            onPressed: () async {
+              // Safety Dialog if trying to start a NEW workout while one is active
+              // FIX: Unified Dialog for both "End & Start New" AND "Restart Active"
+              if (isPlayingSomething && handler.currentWorkoutId != null) {
+                final isSameWorkout = handler.currentWorkoutId == workout.id;
+                final activeTitle =
+                    handler.mediaItem.value?.album ?? 'Active Workout';
+
+                final dialogTitle = isSameWorkout
+                    ? 'Restart Workout?'
+                    : 'End Active Workout?';
+                final dialogContent = isSameWorkout
+                    ? 'Are you sure you want to restart "${workout.title}" from the beginning?'
+                    : 'Are you sure you want to end your active workout "$activeTitle" and start "${workout.title}"?';
+                final confirmBtnText = isSameWorkout
+                    ? 'Restart'
+                    : 'End & Start New';
+
+                bool? confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(dialogTitle),
+                    content: Text(dialogContent),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
+                        child: Text(confirmBtnText),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm != true) return;
+              }
+
+              // Proceed with starting/restarting the workout
+              final rows = detailsAsync.value;
+              if (rows == null || rows.isEmpty) return;
+
+              final routine = rows.map((row) {
+                final ex = row.readTable(ref.read(databaseProvider).exercises);
+                final details = row.readTable(
+                  ref.read(databaseProvider).workoutExercises,
+                );
+                return {
+                  'name': ex.name,
+                  'sets': details.targetSets,
+                  'reps': details.targetReps,
+                  'durationSeconds': details.targetDurationSeconds,
+                  'restSecondsSet': details.restSecondsAfterSet,
+                  'restSecondsExercise': details.restSecondsAfterExercise,
+                  'imageUrl': ex.imageUrl,
+                  'localImagePath': ex.localImagePath,
+                };
+              }).toList();
+
+              final appLocale = ref.read(userProfileProvider).appLocale;
+              handler.startWorkoutSequence(
+                routine,
+                workout.title,
+                workout.id,
+                appLocale,
+              );
+
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ActiveWorkoutScreen(),
+                ),
+              );
+            },
+            icon: Icon(isActive ? Icons.restart_alt : Icons.play_arrow),
+            label: Text(isActive ? 'Restart Workout' : 'Start Workout'),
           );
         },
-        icon: const Icon(Icons.play_arrow),
-        label: const Text('Start Workout'),
       ),
     );
   }

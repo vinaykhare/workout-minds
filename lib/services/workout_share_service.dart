@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:drift/drift.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -81,91 +80,9 @@ class WorkoutShareService {
   }
 
   // ==========================================
-  // 2. IMPORT WORKOUT FROM FILE PATH
+  // 2. MANUAL IMPORT TRIGGER (File Picker)
   // ==========================================
-  Future<String> importFromFilePath(String path) async {
-    try {
-      final file = File(path);
-      if (!await file.exists()) throw Exception("File not found.");
-
-      final jsonString = await file.readAsString();
-      final Map<String, dynamic> data = jsonDecode(jsonString);
-
-      if (data['app'] != 'workout_minds') {
-        throw Exception("Invalid file format. Not a Workout Minds file.");
-      }
-
-      final workoutData = data['workout'];
-      final exercisesData = data['exercises'] as List<dynamic>;
-
-      // Wrap insertion in a transaction
-      await _db.transaction(() async {
-        // Insert Workout
-        final newWorkoutId = await _db
-            .into(_db.workouts)
-            .insert(
-              WorkoutsCompanion.insert(
-                title: "${workoutData['title']} (Imported)",
-                difficultyLevel: workoutData['difficultyLevel'] ?? 'Custom',
-                aiGenerated: const Value(false),
-              ),
-            );
-
-        // Process Exercises
-        for (var exData in exercisesData) {
-          int exId;
-
-          // Check global dictionary
-          final existingEx =
-              await (_db.select(_db.exercises)
-                    ..where((t) => t.name.equals(exData['name']))
-                    ..limit(1))
-                  .getSingleOrNull();
-
-          if (existingEx != null) {
-            exId = existingEx.id;
-          } else {
-            exId = await _db
-                .into(_db.exercises)
-                .insert(
-                  ExercisesCompanion.insert(
-                    name: exData['name'],
-                    muscleGroup: exData['muscleGroup'] ?? 'Custom',
-                    imageUrl: Value(exData['imageUrl']),
-                    isCustom: const Value(true),
-                  ),
-                );
-          }
-
-          // Link to workout
-          await _db
-              .into(_db.workoutExercises)
-              .insert(
-                WorkoutExercisesCompanion.insert(
-                  workoutId: newWorkoutId,
-                  exerciseId: exId,
-                  orderIndex: exData['orderIndex'],
-                  targetSets: exData['targetSets'],
-                  targetReps: Value(exData['targetReps']),
-                  targetDurationSeconds: Value(exData['targetDurationSeconds']),
-                  restSecondsAfterSet: exData['restSecondsAfterSet'] ?? 60,
-                  restSecondsAfterExercise:
-                      exData['restSecondsAfterExercise'] ?? 90,
-                ),
-              );
-        }
-      });
-
-      return "Success";
-    } catch (e) {
-      return "Error importing workout: $e";
-    }
-  }
-
-  // ==========================================
-  // 3. MANUAL IMPORT TRIGGER (File Picker)
-  // ==========================================
-  Future<String?> pickAndImportWorkout() async {
+  Future<Map<String, dynamic>?> pickAndImportWorkout() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType
@@ -174,23 +91,46 @@ class WorkoutShareService {
 
       if (result != null && result.files.single.path != null) {
         final path = result.files.single.path!;
+        // Check extension just for manual file picker to be safe
         if (!path.endsWith('.wmind')) {
-          return "Please select a valid .wmind file.";
+          return null;
         }
-        return await importFromFilePath(path);
+        // Instead of saving, we just return the parsed JSON!
+        return await parseWorkoutFile(path);
       }
       return null; // User canceled
     } catch (e) {
-      return "Error picking file: $e";
+      debugPrint("Error picking file: $e");
+      return null;
+    }
+  }
+
+  // Just reads and validates the file, returns the raw data
+  Future<Map<String, dynamic>?> parseWorkoutFile(String path) async {
+    try {
+      final file = File(path);
+      if (!await file.exists()) return null;
+
+      final jsonString = await file.readAsString();
+      final Map<String, dynamic> data = jsonDecode(jsonString);
+
+      if (data['app'] != 'workout_minds') return null;
+      return data;
+    } catch (e) {
+      debugPrint("Parse Error: $e");
+      return null;
     }
   }
 
   // ==========================================
   // 4. SAVE WORKOUT TO DISK (Download)
   // ==========================================
+  // ==========================================
+  // 4. SAVE WORKOUT TO DISK (Download)
+  // ==========================================
   Future<bool> saveToDisk(int workoutId) async {
     try {
-      // 1. Fetch the Workout and Exercises (Reuse logic or refactor to helper)
+      // 1. Fetch the Workout and Exercises
       final workout = await (_db.select(
         _db.workouts,
       )..where((t) => t.id.equals(workoutId))).getSingle();
@@ -226,24 +166,40 @@ class WorkoutShareService {
         'exercises': exerciseList,
       };
 
-      // 2. Open "Save As" Dialog
+      // 2. Format the filename safely
       final safeName = workout.title.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
 
-      // This opens the native Save File picker
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Workout File',
-        fileName: '$safeName.wmind',
-        type: FileType
-            .any, // Extension filtering is handled by the fileName parameter on most OS
-      );
+      // 3. Save based on Platform
+      if (Platform.isAndroid) {
+        // Direct write to public downloads on Android
+        final dir = Directory('/storage/emulated/0/Download');
 
-      if (outputFile == null) return false; // User canceled
+        // Ensure the directory exists (it almost always does, but safety first)
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
 
-      // 3. Write the file to the chosen path
-      final file = File(outputFile);
-      await file.writeAsString(jsonEncode(payload));
+        // Add a timestamp so we don't overwrite previous downloads of the same workout
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final file = File('${dir.path}/${safeName}_$timestamp.wmind');
 
-      return true;
+        await file.writeAsString(jsonEncode(payload));
+        return true;
+      } else {
+        // Use standard FilePicker for Windows/Desktop
+        String? outputFile = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save Workout File',
+          fileName: '$safeName.wmind',
+          type: FileType.any,
+        );
+
+        if (outputFile == null) return false; // User canceled
+
+        // Write the file to the chosen path
+        final file = File(outputFile);
+        await file.writeAsString(jsonEncode(payload));
+        return true;
+      }
     } catch (e) {
       debugPrint("Save to Disk Error: $e");
       return false;
