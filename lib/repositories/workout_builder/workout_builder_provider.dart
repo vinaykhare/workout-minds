@@ -4,12 +4,14 @@ class DraftExercise {
   String name;
   int sets;
   int reps;
-  int? durationSeconds; // NEW
-  bool isDuration; // NEW
+  int? durationSeconds;
+  bool isDuration;
   int restSecondsSet;
   int restSecondsExercise;
   String? localImagePath;
   String? imageUrl;
+  final String? equipment;
+  final double? targetWeight;
 
   DraftExercise({
     required this.name,
@@ -21,6 +23,8 @@ class DraftExercise {
     this.restSecondsExercise = 90,
     this.localImagePath,
     this.imageUrl,
+    this.equipment,
+    this.targetWeight,
   });
 
   DraftExercise copyWith({
@@ -35,6 +39,10 @@ class DraftExercise {
     String? imageUrl,
     bool clearLocalImage = false,
     bool clearImageUrl = false,
+    String? equipment,
+    double? targetWeight,
+    bool clearEquipment = false,
+    bool clearTargetWeight = false,
   }) {
     return DraftExercise(
       name: name ?? this.name,
@@ -49,6 +57,10 @@ class DraftExercise {
           ? null
           : (localImagePath ?? this.localImagePath),
       imageUrl: clearImageUrl ? null : (imageUrl ?? this.imageUrl),
+      equipment: clearEquipment ? null : (equipment ?? this.equipment),
+      targetWeight: clearTargetWeight
+          ? null
+          : (targetWeight ?? this.targetWeight),
     );
   }
 }

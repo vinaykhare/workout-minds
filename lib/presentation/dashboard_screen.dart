@@ -8,19 +8,28 @@ import 'package:workout_minds/presentation/active_workout_screen.dart';
 import 'package:workout_minds/presentation/widgets/recent_workouts_section.dart';
 import 'package:workout_minds/presentation/widgets/weekly_progress_card.dart';
 import 'package:workout_minds/presentation/widgets/workout_list_section.dart';
+import 'package:workout_minds/presentation/workout_builder/manual_plan_builder_screen.dart';
+import 'package:workout_minds/presentation/workout_builder/plan_details_screen.dart';
 import 'package:workout_minds/presentation/workout_builder/workout_builder_screen.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // 1. The variables are declared here
-    final workoutsAsync = ref.watch(dashboardControllerProvider);
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  Widget build(BuildContext context) {
+    // FIX 1: Watch the new filtered stream directly!
+    final workoutsAsync = ref.watch(filteredWorkoutsStreamProvider);
     final l10n = AppLocalizations.of(context)!;
     final dashboardState = ref.watch(dashboardControllerProvider);
+    // Also read the current search query
+    final currentSearchQuery = ref.watch(dashboardSearchQueryProvider);
 
     // Listen for background errors and show a SnackBar!
     ref.listen(dashboardControllerProvider, (previous, next) {
@@ -95,18 +104,57 @@ class DashboardScreen extends ConsumerWidget {
           child: Image.asset("assets/images/app_logo.png", height: 40),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.edit_note),
             tooltip: 'Build Manually',
-            onPressed: () {
-              ref.read(workoutDraftProvider.notifier).loadExercises([]);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WorkoutBuilderScreen(),
-                ),
-              );
+            onSelected: (value) async {
+              if (value == 'workout') {
+                ref.read(workoutDraftProvider.notifier).loadExercises([]);
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WorkoutBuilderScreen(),
+                  ),
+                );
+                // Refresh dashboard when returning
+                if (context.mounted) {
+                  ref.invalidate(dashboardControllerProvider);
+                }
+              } else if (value == 'plan') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManualPlanBuilderScreen(),
+                  ),
+                );
+                // Refresh dashboard when returning
+                if (context.mounted) {
+                  ref.invalidate(dashboardControllerProvider);
+                }
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'workout',
+                child: Row(
+                  children: [
+                    Icon(Icons.fitness_center, size: 20),
+                    SizedBox(width: 12),
+                    Text('Build Workout'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'plan',
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month, size: 20),
+                    SizedBox(width: 12),
+                    Text('Build Plan'),
+                  ],
+                ),
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.auto_awesome),
@@ -183,12 +231,183 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          // 4. workoutsAsync used here
           workoutsAsync.when(
             data: (workouts) => LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 800;
 
+                Widget buildSearchBar() {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: TextField(
+                      // Pre-fill it just in case
+                      controller: TextEditingController.fromValue(
+                        TextEditingValue(
+                          text: currentSearchQuery,
+                          selection: TextSelection.collapsed(
+                            offset: currentSearchQuery.length,
+                          ),
+                        ),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search plans & exercises...',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest.withAlpha(100),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      ),
+                      // Update the global state instantly when typing
+                      onChanged: (val) =>
+                          ref
+                              .read(dashboardSearchQueryProvider.notifier)
+                              .state = val
+                              .toLowerCase(),
+                    ),
+                  );
+                }
+
+                Widget buildPlansSection() {
+                  return Consumer(
+                    builder: (context, ref, child) {
+                      final plansAsync = ref.watch(plansStreamProvider);
+                      return plansAsync.when(
+                        data: (plans) {
+                          // Apply the same global search filter to Plans
+                          final filteredPlans = plans
+                              .where(
+                                (p) => p.title.toLowerCase().contains(
+                                  currentSearchQuery,
+                                ),
+                              )
+                              .toList();
+
+                          if (filteredPlans.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                                child: Text(
+                                  'My Training Plans',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                height:
+                                    160, // FIX 1: Increased height from 140 to 160
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  itemCount: plans.length,
+                                  itemBuilder: (context, index) {
+                                    final plan = plans[index];
+                                    return Container(
+                                      width: 280,
+                                      margin: const EdgeInsets.all(4),
+                                      child: Card(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primaryContainer,
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          onTap: () async {
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    PlanDetailsScreen(
+                                                      planId: plan.id,
+                                                    ),
+                                              ),
+                                            );
+                                            ref.invalidate(
+                                              dashboardControllerProvider,
+                                            );
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  plan.title,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 18,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '${plan.totalWeeks} Weeks • ${plan.goal ?? "General"}',
+                                                  style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onPrimaryContainer
+                                                        .withAlpha(180),
+                                                    fontSize: 14,
+                                                  ),
+                                                  maxLines:
+                                                      2, // FIX 2: Restrict to 2 lines
+                                                  overflow: TextOverflow
+                                                      .ellipsis, // Add the '...' if it's too long
+                                                ),
+                                                const Spacer(), // Pushes the calendar icon to the bottom
+                                                Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.calendar_month,
+                                                      size: 16,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${plan.totalWeeks * 7} Days',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                        loading: () => const SizedBox.shrink(),
+                        error: (e, st) => const SizedBox.shrink(),
+                      );
+                    },
+                  );
+                }
+
+                // --- LAYOUT ROUTING ---
                 if (isWide) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,9 +419,12 @@ class DashboardScreen extends ConsumerWidget {
                             const SliverToBoxAdapter(
                               child: WeeklyProgressCard(),
                             ),
+                            // Search Bar for wide screens
+                            SliverToBoxAdapter(child: buildSearchBar()),
                             const SliverToBoxAdapter(
                               child: RecentWorkoutsSection(),
                             ),
+                            SliverToBoxAdapter(child: buildPlansSection()),
                           ],
                         ),
                       ),
@@ -210,17 +432,25 @@ class DashboardScreen extends ConsumerWidget {
                       Expanded(
                         flex: 1,
                         child: CustomScrollView(
-                          slivers: [WorkoutListSection(workouts: workouts)],
+                          slivers: [
+                            // FIX: 'workouts' is already perfectly filtered by the stream!
+                            WorkoutListSection(workouts: workouts),
+                          ],
                         ),
                       ),
                     ],
                   );
                 }
 
+                // MOBILE LAYOUT
                 return CustomScrollView(
                   slivers: [
                     const SliverToBoxAdapter(child: WeeklyProgressCard()),
+                    // Search Bar for mobile screens
+                    SliverToBoxAdapter(child: buildSearchBar()),
                     const SliverToBoxAdapter(child: RecentWorkoutsSection()),
+                    SliverToBoxAdapter(child: buildPlansSection()),
+                    // FIX: 'workouts' is already perfectly filtered by the stream!
                     WorkoutListSection(workouts: workouts),
                   ],
                 );
@@ -322,37 +552,109 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   void _showAiGenerator(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final TextEditingController promptController = TextEditingController();
+    bool isGeneratingPlan = false; // Toggle state
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.aiGeneratorTitle),
-        content: TextField(
-          decoration: InputDecoration(
-            hintText: l10n.aiGeneratorHint,
-            helperText: l10n.aiGeneratorHelperText,
-          ),
-          controller: promptController,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final prompt = promptController.text.trim();
-              ref
-                  .read(dashboardControllerProvider.notifier)
-                  .generateWorkout(prompt);
-              Navigator.pop(context);
-            },
-            child: Text(l10n.generate),
-          ),
-        ],
+      barrierDismissible: false, // Don't let them dismiss while loading!
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('AI Personal Trainer'),
+            content: isGeneratingPlan
+                ? const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        'Designing your custom program...\nThis usually takes 10-15 seconds.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: promptController,
+                        decoration: const InputDecoration(
+                          hintText:
+                              "E.g., '4-week six-pack routine' or 'Leg day focus'",
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+            actions: isGeneratingPlan
+                ? []
+                : [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    // Option A: Single Workout
+                    TextButton(
+                      onPressed: () {
+                        final prompt = promptController.text.trim();
+                        if (prompt.isNotEmpty) {
+                          ref
+                              .read(dashboardControllerProvider.notifier)
+                              .generateWorkout(prompt);
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: const Text('1 Workout'),
+                    ),
+                    // Option B: Multi-Week Plan!
+                    FilledButton.icon(
+                      icon: const Icon(Icons.calendar_month, size: 18),
+                      label: const Text('Full Plan'),
+                      onPressed: () async {
+                        final prompt = promptController.text.trim();
+                        if (prompt.isEmpty) return;
+
+                        setState(() => isGeneratingPlan = true);
+
+                        try {
+                          // Call our new AI Plan Repository
+                          final planId = await ref
+                              .read(aiPlanRepositoryProvider)
+                              .generateAndSavePlan(prompt);
+
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext); // Close dialog
+                            // Push the Plan Details Screen!
+                            Navigator.push(
+                              dialogContext,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PlanDetailsScreen(planId: planId),
+                              ),
+                            );
+                            ref.invalidate(dashboardControllerProvider);
+                          }
+                        } catch (e) {
+                          if (dialogContext.mounted) {
+                            setState(() => isGeneratingPlan = false);
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed: $e'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+          );
+        },
       ),
     );
   }

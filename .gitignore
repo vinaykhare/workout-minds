@@ -47,3 +47,5 @@ app.*.map.json
 
 # Environment related
 .env
+merge_code.dart
+combined_code.txt

@@ -424,6 +424,108 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       );
                     },
                   ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete_forever, // Changed to a trash can
+                      color: Colors.redAccent, // Red for destructive actions
+                    ),
+                    title: const Text(
+                      'Delete Cloud Backup',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Permanently remove your data from Google Drive',
+                    ),
+                    onTap: () async {
+                      // 1. Show Safety Confirmation Dialog First!
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Row(
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.redAccent,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Delete Cloud Data?'),
+                            ],
+                          ),
+                          content: const Text(
+                            'This will permanently remove your workout history and profile from Google Drive. \n\nYour local data on this phone will NOT be affected.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                              ),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Delete Backup'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      // 2. If confirmed, execute the wipe
+                      if (confirm == true && context.mounted) {
+                        // Show a simple loading dialog so they know it's working
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const AlertDialog(
+                            content: Row(
+                              children: [
+                                CircularProgressIndicator(
+                                  color: Colors.redAccent,
+                                ),
+                                SizedBox(width: 20),
+                                Expanded(
+                                  child: Text('Deleting from Google Drive...'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+
+                        // Execute the wipe
+                        final success = await ref
+                            .read(driveSyncProvider)
+                            .deleteCloudBackup();
+
+                        // Close the loading dialog
+                        if (context.mounted) Navigator.pop(context);
+
+                        // Show the success/fail snackbar
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Cloud backup permanently deleted.'
+                                    : 'Failed to delete backup.',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              backgroundColor: success
+                                  ? Colors.green
+                                  : Colors.redAccent,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
                 ],
               ),
             ),

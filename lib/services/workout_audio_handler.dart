@@ -296,6 +296,8 @@ class WorkoutAudioHandler extends BaseAudioHandler {
           'currentExerciseIndex': safeIndex + 1,
           'totalSets': ex['sets'],
           'currentSet': _currentSet,
+          'equipment': ex['equipment'],
+          'targetWeight': ex['targetWeight'],
         },
       ),
     );

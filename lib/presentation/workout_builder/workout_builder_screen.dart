@@ -99,7 +99,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
     }
   }
 
-  // DIALOG 2: Image Source Only
+  // DIALOG 2: Image Source Only (Now with Live Preview & Instructions!)
   Future<void> _showImageDialog(
     BuildContext context,
     int index,
@@ -107,128 +107,206 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
     WorkoutDraftNotifier notifier,
   ) async {
     final urlController = TextEditingController(text: ex.imageUrl ?? '');
+    String? currentPreviewUrl = ex.imageUrl;
+    String? currentLocalPath = ex.localImagePath;
 
     await showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Exercise Image'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // --- OPTION A: INTERNET SOURCES ---
-              const Text(
-                'From the Web',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Exercise Visuals'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: urlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Image/GIF URL',
-                        isDense: true,
-                        border: OutlineInputBorder(),
+                  // --- FIX 4B: LIVE PREVIEW ---
+                  if ((currentPreviewUrl != null &&
+                          currentPreviewUrl!.isNotEmpty) ||
+                      currentLocalPath != null)
+                    Container(
+                      height: 200,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2,
+                        ),
+                        image: currentLocalPath != null
+                            ? DecorationImage(
+                                image: FileImage(File(currentLocalPath!)),
+                                fit: BoxFit.cover,
+                              )
+                            : DecorationImage(
+                                image: NetworkImage(currentPreviewUrl!),
+                                fit: BoxFit.cover,
+                              ),
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 100,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'No Image Selected',
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.check_circle, color: Colors.green),
-                    onPressed: () {
-                      if (urlController.text.isNotEmpty) {
-                        notifier.updateExercise(
-                          index,
-                          ex.copyWith(
-                            imageUrl: urlController.text,
-                            clearLocalImage: true,
+
+                  // --- FIX 4A: INSTRUCTION BLOCK ---
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.secondaryContainer.withAlpha(50),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.secondary.withAlpha(100),
+                      ),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "How to add a Web GIF/Image:",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
                           ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          "1. Tap 'Search Web' below.\n2. Tap an image you like.\n3. Select 'Share' and choose 'Copy Link'.\n4. Come back and paste the link below.",
+                          style: TextStyle(fontSize: 12, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // --- OPTION A: INTERNET SOURCES ---
+                  TextField(
+                    controller: urlController,
+                    decoration: const InputDecoration(
+                      labelText: 'Paste Image/GIF URL',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (val) {
+                      // Updates the preview instantly!
+                      setState(() {
+                        currentPreviewUrl = val;
+                        currentLocalPath = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.tonalIcon(
+                    icon: const Icon(Icons.search),
+                    label: const Text('Search Web for Image/GIF'),
+                    onPressed: () async {
+                      final query = Uri.encodeComponent(
+                        '${ex.name} exercise gif',
+                      );
+                      final url = Uri.parse(
+                        'https://www.google.com/search?tbm=isch&q=$query',
+                      );
+                      try {
+                        await launchUrl(url, mode: LaunchMode.inAppBrowserView);
+                      } catch (e) {
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not open web browser.'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16.0),
+                    child: Text(
+                      '— OR —',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+
+                  // --- OPTION B: LOCAL DEVICE ---
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Pick from Device Gallery'),
+                    onPressed: () async {
+                      try {
+                        final XFile? image = await _picker.pickImage(
+                          source: ImageSource.gallery,
                         );
-                        Navigator.pop(dialogContext);
+                        if (image != null) {
+                          setState(() {
+                            currentLocalPath = image.path;
+                            currentPreviewUrl = null;
+                            urlController.clear();
+                          });
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to pick image.'),
+                            ),
+                          );
+                        }
                       }
                     },
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.search),
-                label: const Text('Search Web for Image/GIF'),
-                onPressed: () async {
-                  // Creates a search query like: "Bench Press exercise gif"
-                  final query = Uri.encodeComponent('${ex.name} exercise gif');
-                  final url = Uri.parse(
-                    'https://www.google.com/search?tbm=isch&q=$query',
-                  );
-
-                  try {
-                    // Launches the phone's native web browser
-                    await launchUrl(url, mode: LaunchMode.inAppBrowserView);
-                  } catch (e) {
-                    if (dialogContext.mounted) {
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not open web browser.'),
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text(
-                  '— OR —',
-                  textAlign: TextAlign.center,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text(
+                  'Cancel',
                   style: TextStyle(color: Colors.grey),
                 ),
               ),
-
-              // --- OPTION B: LOCAL DEVICE ---
-              const Text(
-                'From this Device',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Pick from Device Gallery'),
-                onPressed: () async {
-                  try {
-                    final XFile? image = await _picker.pickImage(
-                      source: ImageSource.gallery,
-                    );
-                    if (image != null && dialogContext.mounted) {
-                      notifier.updateExercise(
-                        index,
-                        ex.copyWith(
-                          localImagePath: image.path,
-                          clearImageUrl: true,
-                        ),
-                      );
-                      Navigator.pop(dialogContext);
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Failed to pick image.')),
-                      );
-                    }
-                  }
+              FilledButton(
+                onPressed: () {
+                  // Save the final state to Riverpod ONLY when they hit save!
+                  notifier.updateExercise(
+                    index,
+                    ex.copyWith(
+                      imageUrl: currentPreviewUrl,
+                      localImagePath: currentLocalPath,
+                      clearImageUrl:
+                          currentPreviewUrl == null ||
+                          currentPreviewUrl!.isEmpty,
+                      clearLocalImage: currentLocalPath == null,
+                    ),
+                  );
+                  Navigator.pop(dialogContext);
                 },
+                child: const Text('Save Visual'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -300,6 +378,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                 // Removed drift. prefix
                 imageUrl: drift.Value(draftEx.imageUrl),
                 localImagePath: drift.Value(draftEx.localImagePath),
+                equipment: drift.Value(draftEx.equipment),
               ),
             );
           } else {
@@ -313,6 +392,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                     isCustom: const drift.Value(true),
                     imageUrl: drift.Value(draftEx.imageUrl),
                     localImagePath: drift.Value(draftEx.localImagePath),
+                    equipment: drift.Value(draftEx.equipment),
                   ),
                 );
           }
@@ -334,6 +414,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                       : const drift.Value(null),
                   restSecondsAfterSet: draftEx.restSecondsSet,
                   restSecondsAfterExercise: draftEx.restSecondsExercise,
+                  targetWeight: drift.Value(draftEx.targetWeight),
                 ),
               );
         }
@@ -632,12 +713,93 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                                               );
                                       }
 
+                                      // THE UPDATED COLUMN COMBINING ALL ROWS!
                                       return Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
                                           buildTopRow(),
                                           buildBottomRow(),
+                                          const SizedBox(height: 16),
+
+                                          // --- NEW: EQUIPMENT & WEIGHT ROW ---
+                                          // --- NEW: EQUIPMENT & WEIGHT ROW ---
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: TextFormField(
+                                                  // Key prevents focus loss bugs in Riverpod lists
+                                                  key: ValueKey(
+                                                    'eq_${ex.name}_$index',
+                                                  ),
+                                                  initialValue: ex.equipment,
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        labelText:
+                                                            'Equipment (Opt.)',
+                                                        hintText:
+                                                            'e.g. Barbell',
+                                                        border:
+                                                            OutlineInputBorder(),
+                                                        isDense: true,
+                                                      ),
+                                                  // FIX: Changed to onChanged to capture data instantly on every keystroke!
+                                                  onChanged: (val) {
+                                                    notifier.updateExercise(
+                                                      index,
+                                                      ex.copyWith(
+                                                        equipment: val.trim(),
+                                                        clearEquipment: val
+                                                            .trim()
+                                                            .isEmpty,
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: TextFormField(
+                                                  key: ValueKey(
+                                                    'wt_${ex.name}_$index',
+                                                  ),
+                                                  initialValue:
+                                                      ex.targetWeight
+                                                          ?.toString() ??
+                                                      '',
+                                                  keyboardType:
+                                                      const TextInputType.numberWithOptions(
+                                                        decimal: true,
+                                                      ),
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        labelText:
+                                                            'Target Weight',
+                                                        hintText: 'e.g. 50',
+                                                        suffixText: 'kg/lbs',
+                                                        border:
+                                                            OutlineInputBorder(),
+                                                        isDense: true,
+                                                      ),
+                                                  // FIX: Changed to onChanged to capture data instantly!
+                                                  onChanged: (val) {
+                                                    final parsed =
+                                                        double.tryParse(
+                                                          val.trim(),
+                                                        );
+                                                    notifier.updateExercise(
+                                                      index,
+                                                      ex.copyWith(
+                                                        targetWeight: parsed,
+                                                        clearTargetWeight:
+                                                            parsed == null,
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ],
                                       );
                                     },

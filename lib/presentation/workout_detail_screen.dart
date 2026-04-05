@@ -119,6 +119,32 @@ class WorkoutDetailScreen extends ConsumerWidget {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+
+                                // --- NEW: EQUIPMENT & WEIGHT BADGE ---
+                                if ((ex.equipment != null &&
+                                        ex.equipment!.isNotEmpty) ||
+                                    details.targetWeight != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6.0),
+                                    child: Text(
+                                      [
+                                        if (ex.equipment != null &&
+                                            ex.equipment!.isNotEmpty)
+                                          ex.equipment,
+                                        if (details.targetWeight != null)
+                                          '${details.targetWeight} kg',
+                                      ].join('  •  '),
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.secondary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+
+                                // -------------------------------------
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
@@ -246,6 +272,8 @@ class WorkoutDetailScreen extends ConsumerWidget {
                   'restSecondsExercise': details.restSecondsAfterExercise,
                   'imageUrl': ex.imageUrl,
                   'localImagePath': ex.localImagePath,
+                  'equipment': ex.equipment,
+                  'targetWeight': details.targetWeight,
                 };
               }).toList();
 

@@ -8,13 +8,14 @@ import 'package:path/path.dart' as p;
 // FIX 2: Ensure Drift and the Database are imported!
 import 'package:drift/drift.dart';
 import 'package:workout_minds/data/local/database.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DriveSyncService {
   final AppDatabase _db;
   DriveSyncService(this._db);
   // 1. Paste your newly created WEB Client ID right here!
-  static const String _webClientId =
-      '634732739534-u91a5bo2iujg8mcn5inhcpoahckmdegp.apps.googleusercontent.com';
+  static final String _webClientId =
+      dotenv.env['WEB_CLIENT_ID'] ?? 'Missing Web Client ID';
 
   // 2. V7 uses the Singleton instance
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
@@ -214,6 +215,40 @@ class DriveSyncService {
           });
         }
 
+        // --- FIX 3: Export local Plans to memory ---
+        final localPlans = await _db.select(_db.workoutPlans).get();
+        List<Map<String, dynamic>> localPlanPayloads = [];
+
+        for (var plan in localPlans) {
+          final days = await (_db.select(
+            _db.workoutPlanDays,
+          )..where((t) => t.planId.equals(plan.id))).get();
+          List<Map<String, dynamic>> dayList = [];
+
+          for (var day in days) {
+            String? workoutTitle;
+            if (day.workoutId != null) {
+              // We must save the TITLE, not the ID, because IDs will change when merged with the cloud!
+              final w = await (_db.select(
+                _db.workouts,
+              )..where((t) => t.id.equals(day.workoutId!))).getSingleOrNull();
+              workoutTitle = w?.title;
+            }
+            dayList.add({
+              'dayNumber': day.dayNumber,
+              'workoutTitle': workoutTitle,
+              'notes': day.notes,
+            });
+          }
+          localPlanPayloads.add({
+            'title': plan.title,
+            'description': plan.description,
+            'goal': plan.goal,
+            'totalWeeks': plan.totalWeeks,
+            'days': dayList,
+          });
+        }
+
         // 2. Download Cloud DB (temporarily overwrites local file with cloud history)
         onStatus?.call('Downloading cloud history...');
         await _downloadFile(driveApi, _backupDbName, localDbFile);
@@ -282,6 +317,49 @@ class DriveSyncService {
                             exData['restSecondsAfterSet'] ?? 60,
                         restSecondsAfterExercise:
                             exData['restSecondsAfterExercise'] ?? 90,
+                      ),
+                    );
+              }
+            }
+          }
+          // Now inject the plans
+          for (var pData in localPlanPayloads) {
+            final planTitle = pData['title'];
+            final exists = await (_db.select(
+              _db.workoutPlans,
+            )..where((t) => t.title.equals(planTitle))).getSingleOrNull();
+
+            if (exists == null) {
+              final newPlanId = await _db
+                  .into(_db.workoutPlans)
+                  .insert(
+                    WorkoutPlansCompanion.insert(
+                      title: planTitle,
+                      description: Value(pData['description']),
+                      goal: Value(pData['goal']),
+                      totalWeeks: Value(pData['totalWeeks']),
+                    ),
+                  );
+
+              for (var day in pData['days']) {
+                int? mappedWorkoutId;
+                if (day['workoutTitle'] != null) {
+                  // Find the new Cloud ID for the workout using the Title
+                  final w =
+                      await (_db.select(_db.workouts)
+                            ..where((t) => t.title.equals(day['workoutTitle'])))
+                          .getSingleOrNull();
+                  mappedWorkoutId = w?.id;
+                }
+
+                await _db
+                    .into(_db.workoutPlanDays)
+                    .insert(
+                      WorkoutPlanDaysCompanion.insert(
+                        planId: newPlanId,
+                        dayNumber: day['dayNumber'],
+                        workoutId: Value(mappedWorkoutId),
+                        notes: Value(day['notes']),
                       ),
                     );
               }
@@ -366,6 +444,47 @@ class DriveSyncService {
         _googleSignIn.signOut().ignore();
       }
       return null;
+    }
+  }
+
+  /// WIPE: Deletes all app data from the user's hidden Google Drive AppData folder
+  Future<bool> deleteCloudBackup({Function(String)? onStatus}) async {
+    try {
+      onStatus?.call('Authenticating with Google...');
+      final driveApi = await _getDriveApi();
+      if (driveApi == null) return false;
+
+      onStatus?.call('Locating cloud backups...');
+      final dbId = await _getExistingBackupFileId(driveApi, _backupDbName);
+      final profileId = await _getExistingBackupFileId(
+        driveApi,
+        _backupProfileName,
+      );
+
+      bool deletedAnything = false;
+
+      if (dbId != null) {
+        onStatus?.call('Deleting Database Backup...');
+        await driveApi.files.delete(dbId);
+        deletedAnything = true;
+      }
+
+      if (profileId != null) {
+        onStatus?.call('Deleting Profile Backup...');
+        await driveApi.files.delete(profileId);
+        deletedAnything = true;
+      }
+
+      onStatus?.call(
+        deletedAnything
+            ? 'Cloud backups permanently deleted.'
+            : 'No backups found to delete.',
+      );
+      return true;
+    } catch (e) {
+      debugPrint("Wipe Backup Error: $e");
+      onStatus?.call('Error: Failed to delete cloud backups.');
+      return false;
     }
   }
 

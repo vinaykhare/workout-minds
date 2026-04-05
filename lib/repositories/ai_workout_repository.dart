@@ -181,6 +181,7 @@ class AIWorkoutRepository {
                       muscleGroup: item['muscle_group'] as String,
                       isCustom: const Value(false),
                       imageUrl: Value(parsedImageUrl),
+                      equipment: Value(item['equipment']),
                     ),
                   );
             }
@@ -194,6 +195,9 @@ class AIWorkoutRepository {
                     targetSets: item['target_sets'] as int,
                     targetReps: Value(item['target_reps'] as int?),
                     targetDurationSeconds: const Value(null),
+                    targetWeight: Value(
+                      (item['target_weight'] as num?)?.toDouble(),
+                    ),
                     restSecondsAfterSet:
                         (item['rest_seconds_set'] as int?) ?? 60,
                     restSecondsAfterExercise:

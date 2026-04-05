@@ -147,6 +147,8 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           final reps = extras['reps'] as String?;
           final imageUrl = extras['imageUrl'] as String?;
           final localImagePath = extras['localImagePath'] as String?;
+          final equipment = extras['equipment'] as String?;
+          final targetWeight = extras['targetWeight'] as num?;
 
           final isExercise =
               stateType == 'exercise_rep' || stateType == 'exercise_time';
@@ -251,6 +253,41 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                         color: Colors.white70,
                                       ),
                                     ),
+                                    // const SizedBox(height: 24),
+                                    // Text(
+                                    //   snapshot.data!.artist ?? '',
+                                    //   textAlign: TextAlign.center,
+                                    //   style: const TextStyle(
+                                    //     fontSize: 20,
+                                    //     color: Colors.white70,
+                                    //   ),
+                                    // ),
+
+                                    // --- NEW: ACTIVE BADGE (LANDSCAPE) ---
+                                    if ((equipment != null &&
+                                            equipment.isNotEmpty) ||
+                                        targetWeight != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 12.0,
+                                        ),
+                                        child: Text(
+                                          [
+                                            if (equipment != null &&
+                                                equipment.isNotEmpty)
+                                              equipment,
+                                            if (targetWeight != null)
+                                              '$targetWeight kg',
+                                          ].join('  •  '),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.amberAccent,
+                                          ),
+                                        ),
+                                      ),
+                                    // -------------------------------------
                                     const SizedBox(height: 24),
                                     Expanded(
                                       child: GestureDetector(
@@ -616,7 +653,15 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            // const SizedBox(height: 8),
+                            // Text(
+                            //   snapshot.data!.artist ?? '',
+                            //   textAlign: TextAlign.center,
+                            //   style: const TextStyle(
+                            //     fontSize: 20,
+                            //     color: Colors.white70,
+                            //   ),
+                            // ),
                             Text(
                               snapshot.data!.artist ?? '',
                               textAlign: TextAlign.center,
@@ -625,6 +670,28 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                 color: Colors.white70,
                               ),
                             ),
+                            // --- NEW: ACTIVE BADGE (PORTRAIT) ---
+                            if ((equipment != null && equipment.isNotEmpty) ||
+                                targetWeight != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12.0),
+                                child: Text(
+                                  [
+                                    if (equipment != null &&
+                                        equipment.isNotEmpty)
+                                      equipment,
+                                    if (targetWeight != null)
+                                      '$targetWeight kg',
+                                  ].join('  •  '),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amberAccent,
+                                  ),
+                                ),
+                              ),
+                            // -------------------------------------
                             const SizedBox(height: 32),
 
                             if (stateType == 'exercise_rep')

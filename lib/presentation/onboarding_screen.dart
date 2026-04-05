@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
-import 'package:workout_minds/presentation/dashboard_controller.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
+import 'package:workout_minds/repositories/providers.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -79,10 +79,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // 3. Trigger the AI to build a baseline routine
     try {
       final aiPrompt =
-          "Create a perfectly balanced baseline workout based on my profile.";
-      await ref
-          .read(dashboardControllerProvider.notifier)
-          .generateWorkout(aiPrompt);
+          "Create a perfectly balanced 4-week baseline workout plan based on my profile.";
+
+      // FIX: Use the Plan Repository to generate a full month-long plan!
+      await ref.read(aiPlanRepositoryProvider).generateAndSavePlan(aiPrompt);
+
+      // Force refresh the dashboard streams so it appears instantly
+      ref.invalidate(plansStreamProvider);
+      ref.invalidate(workoutsStreamProvider);
     } catch (e) {
       debugPrint('=== AI GENERATION FAILED DURING ONBOARDING ===');
       debugPrint(e.toString());

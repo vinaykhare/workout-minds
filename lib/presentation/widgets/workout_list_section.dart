@@ -22,7 +22,7 @@ class WorkoutListSection extends ConsumerWidget {
           return const Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Text(
-              'My Routines',
+              'Individual Workouts',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           );
@@ -96,14 +96,43 @@ class WorkoutListSection extends ConsumerWidget {
                     PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'delete') {
-                          await ref
-                              .read(databaseProvider)
-                              .deleteWorkout(workout.id);
-                          ref.invalidate(dashboardControllerProvider);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Workout deleted.')),
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Workout?'),
+                              content: const Text(
+                                'This will permanently delete this workout and all its historical execution logs. This cannot be undone.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text(
+                                    'Cancel',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
                           );
+
+                          if (confirm == true) {
+                            await ref
+                                .read(databaseProvider)
+                                .deleteWorkout(workout.id);
+                            ref.invalidate(dashboardControllerProvider);
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Workout deleted.')),
+                            );
+                          }
                         } else if (value == 'edit') {
                           _openEditorWithData(context, ref, workout);
                         } else if (value == 'share') {
@@ -247,6 +276,8 @@ class WorkoutListSection extends ConsumerWidget {
         'restSecondsExercise': details.restSecondsAfterExercise,
         'imageUrl': ex.imageUrl,
         'localImagePath': ex.localImagePath,
+        'equipment': ex.equipment,
+        'targetWeight': details.targetWeight,
       };
     }).toList();
 
@@ -285,6 +316,8 @@ class WorkoutListSection extends ConsumerWidget {
         restSecondsExercise: details.restSecondsAfterExercise,
         imageUrl: ex.imageUrl,
         localImagePath: ex.localImagePath,
+        equipment: ex.equipment,
+        targetWeight: details.targetWeight,
       );
     }).toList();
 

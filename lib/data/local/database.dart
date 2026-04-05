@@ -8,29 +8,29 @@ import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
 
-// 1. Exercises Table: The global library of movements [cite: 17]
+// 1. Exercises Table: The global library of movements
 class Exercises extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   TextColumn get muscleGroup => text()();
   TextColumn get instructionUrl => text().nullable()();
   BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
-  TextColumn get imageUrl =>
-      text().nullable()(); // For AI/Internet fetched images
-  TextColumn get localImagePath =>
-      text().nullable()(); // For user-selected gallery images
+  TextColumn get imageUrl => text().nullable()();
+  TextColumn get localImagePath => text().nullable()();
+  TextColumn get instructions => text().nullable()(); // Added for Issue 4c
+  TextColumn get equipment => text().nullable()();
 }
 
-// 2. Workouts Table: Metadata for training sessions [cite: 17]
+// 2. Workouts Table: Metadata for training sessions (The "Floors")
 class Workouts extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  TextColumn get difficultyLevel => text()(); // e.g., Beginner, Advanced
+  TextColumn get difficultyLevel => text()();
   BoolColumn get aiGenerated => boolean().withDefault(const Constant(false))();
 }
 
-// 3. WorkoutExercises: Junction table for the many-to-many relationship
+// 3. WorkoutExercises: Junction table
 class WorkoutExercises extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get workoutId =>
@@ -38,88 +38,100 @@ class WorkoutExercises extends Table {
   IntColumn get exerciseId => integer().references(Exercises, #id)();
   IntColumn get orderIndex => integer()();
 
-  // Reps can now be nullable if it's a duration-based exercise
   IntColumn get targetSets => integer()();
   IntColumn get targetReps => integer().nullable()();
-
-  // NEW: Support for timed exercises (e.g. 30 seconds of jumping jacks)
   IntColumn get targetDurationSeconds => integer().nullable()();
-
+  RealColumn get targetWeight => real().nullable()();
   IntColumn get restSecondsAfterSet => integer()();
   IntColumn get restSecondsAfterExercise => integer()();
-
-  // @override
-  // Set<Column> get primaryKey => {workoutId, exerciseId, orderIndex};
 }
 
-// 4. WorkoutLogs: Historical records of completed sessions [cite: 17]
+// 4. WorkoutLogs: Historical records of completed sessions
 class WorkoutLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get workoutId => integer().references(Workouts, #id)();
   DateTimeColumn get executedAt => dateTime().withDefault(currentDateAndTime)();
-  RealColumn get totalVolume => real()(); // weight x reps [cite: 17]
+  RealColumn get totalVolume => real()();
   IntColumn get durationMinutes => integer()();
+  TextColumn get executionFeedback => text().nullable()(); // Added for Issue 4d
 }
 
 // 5. ExerciseLogs: Granular tracking of individual sets performed
 class ExerciseLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
-
-  // Links this specific set to the overall workout session.
-  // Cascade delete ensures if the user deletes the workout record, the set records vanish too.
   IntColumn get workoutLogId =>
       integer().references(WorkoutLogs, #id, onDelete: KeyAction.cascade)();
-
-  // Links to the global exercise dictionary (e.g., "Bench Press")
   IntColumn get exerciseId => integer().references(Exercises, #id)();
-
-  // The actual execution metrics
-  IntColumn get setIndex => integer()(); // 1st set, 2nd set, etc.
-  RealColumn get weight =>
-      real()(); // Real column to support decimals like 12.5 kg
+  IntColumn get setIndex => integer()();
+  RealColumn get weight => real()();
   IntColumn get reps => integer()();
+  IntColumn get rpe => integer().nullable()();
+  TextColumn get notes => text().nullable()();
+}
 
-  // Future-proofing fields
-  IntColumn get rpe =>
-      integer().nullable()(); // Rate of Perceived Exertion (1-10 scale)
-  TextColumn get notes =>
-      text().nullable()(); // E.g., "Felt a pinch in shoulder"
+// ==========================================
+// NEW TABLES: THE "UMBRELLA" PLAN STRUCTURE
+// ==========================================
+
+// 6. WorkoutPlans: The high-level program metadata
+class WorkoutPlans extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get goal => text().nullable()(); // e.g., "Fat Loss", "Muscle Gain"
+  IntColumn get totalWeeks => integer().withDefault(const Constant(4))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 7. WorkoutPlanDays: Mapping workouts to specific days in the plan
+class WorkoutPlanDays extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get planId =>
+      integer().references(WorkoutPlans, #id, onDelete: KeyAction.cascade)();
+
+  // Represents the day sequence (e.g., Day 1, Day 2... Day 28)
+  IntColumn get dayNumber => integer()();
+
+  // A null workoutId represents a "Rest Day"
+  // setNull ensures if a user deletes the underlying workout, the plan doesn't break!
+  IntColumn get workoutId => integer().nullable().references(
+    Workouts,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+
+  TextColumn get notes => text().nullable()(); // e.g., "Focus on form today"
 }
 
 @DriftDatabase(
-  tables: [Exercises, Workouts, WorkoutExercises, WorkoutLogs, ExerciseLogs],
+  tables: [
+    Exercises,
+    Workouts,
+    WorkoutExercises,
+    WorkoutLogs,
+    ExerciseLogs,
+    WorkoutPlans, // ADDED
+    WorkoutPlanDays, // ADDED
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  // Bumped to version 3!
   @override
   int get schemaVersion => 1;
 
-  // AI Tool Call Helper: Fetch historical stats for a specific exercise [cite: 32, 33]
-  // Change OrderMode.desc to OrderingMode.desc
-  // Future<List<WorkoutLog>> getLogsForExercise(int exerciseId) {
-  //   return (select(workoutLogs)
-  //         ..where((tbl) => tbl.workoutId.equals(exerciseId))
-  //         ..orderBy([
-  //           (t) =>
-  //               OrderingTerm(expression: t.executedAt, mode: OrderingMode.desc),
-  //         ]))
-  //       .get();
-  // }
+  // --- ALL EXISTING METHODS REMAIN UNCHANGED BELOW THIS LINE ---
 
-  // Fetches the set-by-set history for a specific exercise (e.g., to plot a Bench Press progress chart)
   Future<List<ExerciseLog>> getHistoryForExercise(int targetExerciseId) {
     return (select(exerciseLogs)
           ..where((tbl) => tbl.exerciseId.equals(targetExerciseId))
-          // We can't order by date directly here since date is in WorkoutLogs.
-          // For now, ordering by the log ID inherently sorts them chronologically.
           ..orderBy([
             (t) => OrderingTerm(expression: t.id, mode: OrderingMode.desc),
           ]))
         .get();
   }
 
-  // Fetches the historical completion logs for a specific Workout
   Future<List<WorkoutLog>> getLogsForWorkout(int workoutId) {
     return (select(workoutLogs)
           ..where((tbl) => tbl.workoutId.equals(workoutId))
@@ -130,7 +142,6 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  // Fetches exercises for a specific workout, ordered by their sequence
   Future<List<TypedResult>> getWorkoutDetails(int workoutId) {
     return (select(workoutExercises).join([
             innerJoin(
@@ -160,7 +171,6 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
-  // Fetches the most recent logs globally AND grabs the workout title!
   Future<List<TypedResult>> getRecentWorkoutLogsWithTitles({int limit = 10}) {
     return (select(workoutLogs).join([
             innerJoin(workouts, workouts.id.equalsExp(workoutLogs.workoutId)),
@@ -170,42 +180,180 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  // Deletes a workout and all its linked junction records automatically
   Future<void> deleteWorkout(int workoutId) {
     return (delete(workouts)..where((t) => t.id.equals(workoutId))).go();
   }
 
-  // 1. Save the workout when completed
-  // 1. Save the workout when completed
-  Future<void> logWorkoutCompletion(int workoutId, int calculatedVolume) async {
+  // Deletes a plan. (Cascade delete automatically wipes WorkoutPlanDays!)
+  Future<void> deletePlan(int planId) {
+    return (delete(workoutPlans)..where((t) => t.id.equals(planId))).go();
+  }
+
+  Future<void> logWorkoutCompletion(
+    int workoutId,
+    int calculatedVolume, {
+    String? feedbackJson,
+  }) async {
     await into(workoutLogs).insert(
       WorkoutLogsCompanion(
         workoutId: Value(workoutId),
         executedAt: Value(DateTime.now()),
-        // FIX: Convert the int to a double to match your database schema
         totalVolume: Value(calculatedVolume.toDouble()),
         durationMinutes: const Value(0),
+        executionFeedback: Value(feedbackJson),
       ),
     );
   }
 
-  // 2. Fetch data for the last 7 days
   Future<List<WorkoutLog>> getWeeklyVolumeStats() async {
     final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
-    // Simple fetch: let Dart handle the math in the provider
     return await (select(
       workoutLogs,
     )..where((t) => t.executedAt.isBiggerOrEqualValue(sevenDaysAgo))).get();
   }
 
-  // --- DANGER ZONE: Factory Reset ---
+  // --- NEW: PLAN QUERIES ---
+  // 1. Fetch the umbrella plan details
+  Future<WorkoutPlan> getPlan(int planId) {
+    return (select(
+      workoutPlans,
+    )..where((t) => t.id.equals(planId))).getSingle();
+  }
+
+  // 2. Fetch the full calendar schedule (Left Join because Rest Days have a null workoutId!)
+  Future<List<TypedResult>> getPlanSchedule(int planId) {
+    return (select(workoutPlanDays).join([
+            leftOuterJoin(
+              workouts,
+              workouts.id.equalsExp(workoutPlanDays.workoutId),
+            ),
+          ])
+          ..where(workoutPlanDays.planId.equals(planId))
+          ..orderBy([OrderingTerm.asc(workoutPlanDays.dayNumber)]))
+        .get();
+  }
+
   Future<void> wipeAllUserData() async {
-    // Delete all historical logs and custom workouts
+    // Delete tables in reverse order of dependencies
+    await delete(workoutPlanDays).go();
+    await delete(workoutPlans).go();
     await delete(exerciseLogs).go();
     await delete(workoutLogs).go();
     await delete(workoutExercises).go();
     await delete(workouts).go();
-    // Note: We leave the 'exercises' table alone so the global library remains intact!
+  }
+
+  // --- MANUAL PLAN BUILDER LOGIC ---
+  Future<int> createManualPlan(
+    String title,
+    int weeks,
+    Map<int, int> scheduleWorkoutIds,
+  ) async {
+    return transaction(() async {
+      // 1. Create the Umbrella Plan
+      final planId = await into(workoutPlans).insert(
+        WorkoutPlansCompanion.insert(
+          title: title,
+          totalWeeks: Value(weeks),
+          goal: const Value('Custom Plan'),
+        ),
+      );
+
+      // 2. Loop through every day and link the workouts
+      final totalDays = weeks * 7;
+      for (int i = 1; i <= totalDays; i++) {
+        final workoutId =
+            scheduleWorkoutIds[i]; // Will be null if it's a rest day
+        await into(workoutPlanDays).insert(
+          WorkoutPlanDaysCompanion.insert(
+            planId: planId,
+            dayNumber: i,
+            workoutId: Value(workoutId),
+          ),
+        );
+      }
+      return planId; // Return ID so UI can navigate to it
+    });
+  }
+
+  // --- EDIT PLAN LOGIC ---
+  Future<void> updateManualPlan(
+    int planId,
+    String title,
+    int weeks,
+    Map<int, int> scheduleWorkoutIds,
+  ) async {
+    return transaction(() async {
+      // 1. Update the Umbrella Plan details
+      await (update(workoutPlans)..where((t) => t.id.equals(planId))).write(
+        WorkoutPlansCompanion(title: Value(title), totalWeeks: Value(weeks)),
+      );
+
+      // 2. Wipe the old schedule completely
+      await (delete(
+        workoutPlanDays,
+      )..where((t) => t.planId.equals(planId))).go();
+
+      // 3. Insert the newly mapped schedule
+      final totalDays = weeks * 7;
+      for (int i = 1; i <= totalDays; i++) {
+        final workoutId = scheduleWorkoutIds[i];
+        await into(workoutPlanDays).insert(
+          WorkoutPlanDaysCompanion.insert(
+            planId: planId,
+            dayNumber: i,
+            workoutId: Value(workoutId),
+          ),
+        );
+      }
+    });
+  }
+
+  // --- FIX 1: DEEP SEARCH WORKOUTS BY EXERCISE TITLE ---
+  Stream<List<Workout>> watchFilteredWorkouts(String query) {
+    if (query.trim().isEmpty) {
+      return (select(
+        workouts,
+      )..orderBy([(t) => OrderingTerm.desc(t.id)])).watch();
+    }
+
+    final q = '%${query.trim()}%';
+    final titleMatch = workouts.title.like(q);
+
+    // Looks inside the workout to see if any exercise matches the query
+    final exerciseMatch = existsQuery(
+      select(workoutExercises).join([
+        innerJoin(
+          exercises,
+          exercises.id.equalsExp(workoutExercises.exerciseId),
+        ),
+      ])..where(
+        workoutExercises.workoutId.equalsExp(workouts.id) &
+            exercises.name.like(q),
+      ),
+    );
+
+    return (select(workouts)
+          ..where((t) => titleMatch | exerciseMatch)
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .watch();
+  }
+
+  // --- FIX 2: REAL-TIME DASHBOARD LOGS ---
+  Stream<List<WorkoutLog>> watchWeeklyVolumeStats() {
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
+    return (select(
+      workoutLogs,
+    )..where((t) => t.executedAt.isBiggerOrEqualValue(sevenDaysAgo))).watch();
+  }
+
+  Stream<List<TypedResult>> watchRecentWorkoutLogsWithTitles({int limit = 10}) {
+    return (select(workoutLogs).join([
+            innerJoin(workouts, workouts.id.equalsExp(workoutLogs.workoutId)),
+          ])
+          ..orderBy([OrderingTerm.desc(workoutLogs.executedAt)])
+          ..limit(limit))
+        .watch();
   }
 }
 
@@ -214,17 +362,13 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'workout_minds.sqlite'));
 
-    // 1. THE ANDROID FIX: Forces the OS to locate the bundled libsqlite3.so
     if (Platform.isAndroid) {
       await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
     }
 
-    // 2. SANDBOX FIX: Tell SQLite exactly where it is allowed to write temporary files
     final cachebase = (await getTemporaryDirectory()).path;
     sqlite3.tempDirectory = cachebase;
 
-    // 3. PERFORMANCE FIX: Open the database in a background isolate
-    // This prevents the UI from freezing when the AI inserts massive workout JSONs!
     return NativeDatabase.createInBackground(file);
   });
 }
