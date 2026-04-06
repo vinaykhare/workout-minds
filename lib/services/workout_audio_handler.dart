@@ -36,6 +36,9 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     flutterTts.setSpeechRate(0.5);
   }
 
+  // --- NEW: EXECUTION FEEDBACK TRACKER ---
+  final Map<String, String> executionFeedback = {};
+
   // --- 1. CORE STATE MANAGEMENT ---
 
   Future<void> startWorkoutSequence(
@@ -298,6 +301,8 @@ class WorkoutAudioHandler extends BaseAudioHandler {
           'currentSet': _currentSet,
           'equipment': ex['equipment'],
           'targetWeight': ex['targetWeight'],
+          'instructions': ex['instructions'],
+          'targetDuration': ex['durationSeconds'],
         },
       ),
     );
@@ -361,5 +366,27 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       currentWorkoutId!,
       _currentLanguage,
     );
+  }
+
+  void recordFeedback(String exerciseName, String note) {
+    executionFeedback[exerciseName] = note;
+  }
+
+  // --- NEW: ON-DEMAND TTS INSTRUCTIONS ---
+  Future<void> speakCurrentInstructions() async {
+    if (_routine.isEmpty) return;
+    final ex = _routine[_currentIndex];
+    final instructions = ex['instructions'] as String?;
+
+    if (instructions != null && instructions.isNotEmpty) {
+      // Temporarily pause the timer if it's running
+      final wasRunning = !_isPaused && _currentScreenState == 'exercise_time';
+      if (wasRunning) _isPaused = true;
+
+      await flutterTts.speak(instructions);
+      await flutterTts.awaitSpeakCompletion(true);
+
+      if (wasRunning) _isPaused = false;
+    }
   }
 }

@@ -76,6 +76,224 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     );
   }
 
+  // FIX 2: Added 'async' so we can await the modal and pause/resume the timer!
+  void _showFeedbackModal(
+    String exName,
+    bool isTooEasy,
+    Map<String, dynamic> extras,
+  ) async {
+    final targetReps = extras['reps'] != null
+        ? int.tryParse(extras['reps'].toString())
+        : null;
+    final targetDuration = extras['targetDuration'] as int?;
+    final targetWeight = extras['targetWeight'] as num?;
+
+    // --- FIX 1: CALCULATE STRICT LOGICAL BOUNDARIES ---
+
+    // Reps Logic
+    int repMin = 0;
+    int repMax = 10;
+    int actualReps = 0;
+
+    if (targetReps != null) {
+      if (isTooEasy) {
+        repMin = targetReps + 1;
+        repMax = targetReps + 15; // Give them +15 reps headroom
+        actualReps = repMin;
+      } else {
+        repMin = 0;
+        repMax = targetReps - 1;
+        if (repMax < 0) repMax = 0;
+        actualReps = repMax;
+      }
+    }
+
+    // Safety logic for Flutter Sliders (max must be > min)
+    double sliderRepMax = repMax > repMin
+        ? repMax.toDouble()
+        : (repMin + 1).toDouble();
+    int repDivs = (sliderRepMax - repMin).toInt();
+
+    // Duration Logic
+    int durMin = 0;
+    int durMax = 30;
+    int actualDuration = 0;
+
+    if (targetDuration != null && targetDuration > 0) {
+      if (isTooEasy) {
+        durMin = targetDuration + 1;
+        durMax = targetDuration + 60; // Give them +60s headroom
+        actualDuration = durMin;
+      } else {
+        durMin = 0;
+        durMax = targetDuration - 1;
+        if (durMax < 0) durMax = 0;
+        actualDuration = durMax;
+      }
+    }
+
+    double sliderDurMax = durMax > durMin
+        ? durMax.toDouble()
+        : (durMin + 1).toDouble();
+    int durDivs = (sliderDurMax - durMin).toInt();
+
+    // Weight Logic
+    String weightFeedback = isTooEasy ? 'Too Light' : 'Too Heavy';
+
+    final handler = ref.read(audioHandlerProvider);
+
+    // --- FIX 2: PAUSE THE TIMER ---
+    final wasPlaying = handler.playbackState.value.playing;
+    if (wasPlaying) {
+      await handler.pause();
+    }
+    if (!mounted) return;
+
+    // Await the modal so we know when the user closes it!
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: const EdgeInsets.all(
+              24.0,
+            ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  isTooEasy ? 'Too Easy!' : 'Too Hard!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isTooEasy ? Colors.green : Colors.redAccent,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tell the AI your actual capacity for $exName so it can adapt your next plan.',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+
+                // --- SLIDER 1: REPS (If it's a rep-based exercise) ---
+                if (targetReps != null) ...[
+                  Text(
+                    'My Max Capacity is: $actualReps Reps',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Slider(
+                    value: actualReps.toDouble().clamp(
+                      repMin.toDouble(),
+                      sliderRepMax,
+                    ),
+                    min: repMin.toDouble(),
+                    max: sliderRepMax,
+                    divisions: repDivs > 0 ? repDivs : 1,
+                    activeColor: isTooEasy ? Colors.green : Colors.redAccent,
+                    onChanged: (val) =>
+                        setModalState(() => actualReps = val.toInt()),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // --- SLIDER 2: TIME (If it's a time-based exercise) ---
+                if (targetDuration != null && targetDuration > 0) ...[
+                  Text(
+                    'My Max Capacity is: $actualDuration Seconds',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Slider(
+                    value: actualDuration.toDouble().clamp(
+                      durMin.toDouble(),
+                      sliderDurMax,
+                    ),
+                    min: durMin.toDouble(),
+                    max: sliderDurMax,
+                    divisions: durDivs > 0 ? durDivs : 1,
+                    activeColor: isTooEasy ? Colors.green : Colors.redAccent,
+                    onChanged: (val) =>
+                        setModalState(() => actualDuration = val.toInt()),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // --- TOGGLES: WEIGHT (If a weight was assigned) ---
+                if (targetWeight != null && targetWeight > 0) ...[
+                  Text(
+                    'The weight ($targetWeight) felt:',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'Too Light',
+                        label: Text('Too Light'),
+                      ),
+                      ButtonSegment(
+                        value: 'Just Right',
+                        label: Text('Just Right'),
+                      ),
+                      ButtonSegment(
+                        value: 'Too Heavy',
+                        label: Text('Too Heavy'),
+                      ),
+                    ],
+                    selected: {weightFeedback},
+                    onSelectionChanged: (Set<String> newSelection) {
+                      setModalState(() => weightFeedback = newSelection.first);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                FilledButton(
+                  onPressed: () {
+                    // Build the AI Feedback String
+                    String note =
+                        "Rated: ${isTooEasy ? 'Too Easy' : 'Too Hard'}. ";
+
+                    if (targetReps != null) {
+                      note += "Actual Capacity: $actualReps reps. ";
+                    } else if (targetDuration != null && targetDuration > 0) {
+                      note += "Actual Capacity: $actualDuration seconds. ";
+                    }
+
+                    if (targetWeight != null && targetWeight > 0) {
+                      note += "Weight ($targetWeight) was $weightFeedback.";
+                    }
+
+                    handler.recordFeedback(exName, note.trim());
+                    Navigator.pop(context); // This unblocks the await!
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Feedback saved for AI review.'),
+                        backgroundColor: isTooEasy
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                    );
+                  },
+                  child: const Text('Save Feedback'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    // --- FIX 2: RESUME THE TIMER ---
+    // Once the modal is closed, if the timer was running before, start it back up!
+    if (wasPlaying && mounted) {
+      await handler.play();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -84,7 +302,15 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
 
     handler.workoutCompleteStream.listen((isComplete) async {
       if (isComplete && mounted) {
-        await db.logWorkoutCompletion(handler.currentWorkoutId!, 100);
+        String? feedbackJson;
+        if (handler.executionFeedback.isNotEmpty) {
+          feedbackJson = jsonEncode(handler.executionFeedback);
+        }
+        await db.logWorkoutCompletion(
+          handler.currentWorkoutId!,
+          100,
+          feedbackJson: feedbackJson,
+        );
         ref.invalidate(weeklyStatsProvider);
 
         // --- NEW: EVENT-DRIVEN CLOUD SYNC ---
@@ -149,6 +375,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           final localImagePath = extras['localImagePath'] as String?;
           final equipment = extras['equipment'] as String?;
           final targetWeight = extras['targetWeight'] as num?;
+          final instructions = extras['instructions'] as String?;
 
           final isExercise =
               stateType == 'exercise_rep' || stateType == 'exercise_time';
@@ -235,14 +462,34 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                       },
                                     ),
                                   ] else if (isExercise) ...[
-                                    Text(
-                                      exName,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                                    // Replace your exName Text widget with this:
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            exName,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 36,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        if (instructions != null &&
+                                            instructions.isNotEmpty)
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.volume_up,
+                                              color: Colors.blueAccent,
+                                              size: 32,
+                                            ),
+                                            onPressed: () => handler
+                                                .speakCurrentInstructions(),
+                                          ),
+                                      ],
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
@@ -445,6 +692,64 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                           padding: const EdgeInsets.all(16),
                                         ),
                                       ),
+                                    // --- NEW: EASY/HARD FEEDBACK ROW ---
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            icon: const Icon(
+                                              Icons.thumb_down_alt_outlined,
+                                              color: Colors.redAccent,
+                                            ),
+                                            label: const Text(
+                                              'Too Hard',
+                                              style: TextStyle(
+                                                color: Colors.redAccent,
+                                              ),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              side: const BorderSide(
+                                                color: Colors.redAccent,
+                                              ),
+                                            ),
+                                            onPressed: () => _showFeedbackModal(
+                                              exName,
+                                              false,
+                                              extras,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            icon: const Icon(
+                                              Icons.thumb_up_alt_outlined,
+                                              color: Colors.green,
+                                            ),
+                                            label: const Text(
+                                              'Too Easy',
+                                              style: TextStyle(
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              side: const BorderSide(
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            onPressed: () => _showFeedbackModal(
+                                              exName,
+                                              true,
+                                              extras,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    // -----------------------------------
                                   ] else if (stateType == 'rest') ...[
                                     Text(
                                       '$timerValue',
@@ -644,14 +949,33 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                             else
                               const Spacer(),
 
-                            Text(
-                              exName,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                            // Replace your exName Text widget with this:
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    exName,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                if (instructions != null &&
+                                    instructions.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.volume_up,
+                                      color: Colors.blueAccent,
+                                      size: 32,
+                                    ),
+                                    onPressed: () =>
+                                        handler.speakCurrentInstructions(),
+                                  ),
+                              ],
                             ),
                             // const SizedBox(height: 8),
                             // Text(
@@ -754,6 +1078,60 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                   padding: const EdgeInsets.all(16),
                                 ),
                               ),
+                            // Your existing Finish Set button here...
+                            // --- NEW: EASY/HARD FEEDBACK ROW ---
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(
+                                      Icons.thumb_down_alt_outlined,
+                                      color: Colors.redAccent,
+                                    ),
+                                    label: const Text(
+                                      'Too Hard',
+                                      style: TextStyle(color: Colors.redAccent),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Colors.redAccent,
+                                      ),
+                                    ),
+                                    onPressed: () => _showFeedbackModal(
+                                      exName,
+                                      false,
+                                      extras,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(
+                                      Icons.thumb_up_alt_outlined,
+                                      color: Colors.green,
+                                    ),
+                                    label: const Text(
+                                      'Too Easy',
+                                      style: TextStyle(color: Colors.green),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    onPressed: () => _showFeedbackModal(
+                                      exName,
+                                      true,
+                                      extras,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // -----------------------------------
                           ],
 
                           if (stateType == 'rest') ...[

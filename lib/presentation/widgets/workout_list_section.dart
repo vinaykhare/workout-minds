@@ -278,6 +278,7 @@ class WorkoutListSection extends ConsumerWidget {
         'localImagePath': ex.localImagePath,
         'equipment': ex.equipment,
         'targetWeight': details.targetWeight,
+        'instructions': ex.instructions,
       };
     }).toList();
 
@@ -318,6 +319,7 @@ class WorkoutListSection extends ConsumerWidget {
         localImagePath: ex.localImagePath,
         equipment: ex.equipment,
         targetWeight: details.targetWeight,
+        instructions: ex.instructions,
       );
     }).toList();
 

@@ -274,6 +274,7 @@ class WorkoutDetailScreen extends ConsumerWidget {
                   'localImagePath': ex.localImagePath,
                   'equipment': ex.equipment,
                   'targetWeight': details.targetWeight,
+                  'instructions': ex.instructions,
                 };
               }).toList();
 

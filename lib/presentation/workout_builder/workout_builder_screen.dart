@@ -379,6 +379,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                 imageUrl: drift.Value(draftEx.imageUrl),
                 localImagePath: drift.Value(draftEx.localImagePath),
                 equipment: drift.Value(draftEx.equipment),
+                instructions: drift.Value(draftEx.instructions),
               ),
             );
           } else {
@@ -393,6 +394,7 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                     imageUrl: drift.Value(draftEx.imageUrl),
                     localImagePath: drift.Value(draftEx.localImagePath),
                     equipment: drift.Value(draftEx.equipment),
+                    instructions: drift.Value(draftEx.instructions),
                   ),
                 );
           }
@@ -799,6 +801,33 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                                                 ),
                                               ),
                                             ],
+                                          ),
+                                          // ... immediately below the Equipment/Weight Row
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            key: ValueKey(
+                                              'inst_${ex.name}_$index',
+                                            ),
+                                            initialValue: ex.instructions,
+                                            maxLines: 2,
+                                            decoration: const InputDecoration(
+                                              labelText:
+                                                  'Exercise Instructions & Tips',
+                                              hintText:
+                                                  'e.g. Keep your back straight, squeeze at the top.',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (val) {
+                                              notifier.updateExercise(
+                                                index,
+                                                ex.copyWith(
+                                                  instructions: val.trim(),
+                                                  clearInstructions: val
+                                                      .trim()
+                                                      .isEmpty,
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       );

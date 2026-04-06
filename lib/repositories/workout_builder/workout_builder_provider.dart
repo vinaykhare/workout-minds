@@ -12,6 +12,7 @@ class DraftExercise {
   String? imageUrl;
   final String? equipment;
   final double? targetWeight;
+  final String? instructions;
 
   DraftExercise({
     required this.name,
@@ -25,6 +26,7 @@ class DraftExercise {
     this.imageUrl,
     this.equipment,
     this.targetWeight,
+    this.instructions,
   });
 
   DraftExercise copyWith({
@@ -43,6 +45,8 @@ class DraftExercise {
     double? targetWeight,
     bool clearEquipment = false,
     bool clearTargetWeight = false,
+    String? instructions,
+    bool clearInstructions = false,
   }) {
     return DraftExercise(
       name: name ?? this.name,
@@ -61,6 +65,9 @@ class DraftExercise {
       targetWeight: clearTargetWeight
           ? null
           : (targetWeight ?? this.targetWeight),
+      instructions: clearInstructions
+          ? null
+          : (instructions ?? this.instructions),
     );
   }
 }
