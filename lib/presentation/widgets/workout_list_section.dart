@@ -9,6 +9,7 @@ import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/presentation/workout_detail_screen.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
+import 'package:workout_minds/presentation/workout_builder/plan_details_screen.dart'; // <--- NEW IMPORT
 
 class WorkoutListSection extends ConsumerWidget {
   final List<Workout> workouts;
@@ -96,38 +97,196 @@ class WorkoutListSection extends ConsumerWidget {
                     PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'delete') {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delete Workout?'),
-                              content: const Text(
-                                'This will permanently delete this workout and all its historical execution logs. This cannot be undone.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text(
-                                    'Cancel',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ),
-                                FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text('Delete'),
-                                ),
-                              ],
-                            ),
-                          );
+                          final db = ref.read(databaseProvider);
 
-                          if (confirm == true) {
-                            await ref
-                                .read(databaseProvider)
-                                .deleteWorkout(workout.id);
+                          // 1. Check if the workout is used in ANY plans
+                          final planUsage =
+                              await (db.select(db.workoutPlanDays)..where(
+                                    (t) => t.workoutId.equals(workout.id),
+                                  ))
+                                  .get();
+                          final uniquePlanIds = planUsage
+                              .map((r) => r.planId)
+                              .toSet()
+                              .toList();
+
+                          bool confirmDelete = false;
+
+                          // 2. If it IS used in plans, show the advanced warning
+                          if (uniquePlanIds.isNotEmpty) {
+                            final affectedPlans = await (db.select(
+                              db.workoutPlans,
+                            )..where((t) => t.id.isIn(uniquePlanIds))).get();
+
+                            if (!context.mounted) return;
+
+                            final action = await showDialog<String>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.redAccent,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text('Workout in Use'),
+                                  ],
+                                ),
+                                content: Text(
+                                  'This workout is actively scheduled in ${affectedPlans.length} workout plan(s).\n\nDeleting it will permanently remove it from those plans (turning those scheduled days into Rest Days).',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(ctx, 'cancel'),
+                                    child: const Text(
+                                      'Cancel',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, 'view'),
+                                    child: const Text(
+                                      'View Plans',
+                                      style: TextStyle(color: Colors.blue),
+                                    ),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                    onPressed: () =>
+                                        Navigator.pop(ctx, 'delete'),
+                                    child: const Text('Delete Anyway'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (action == 'view') {
+                              if (!context.mounted) return;
+                              showModalBottomSheet(
+                                context: context,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(24),
+                                  ),
+                                ),
+                                builder: (ctx) => Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      const Text(
+                                        'Plans Using This Workout',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ...affectedPlans.map(
+                                        (plan) => Card(
+                                          elevation: 0,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .surfaceContainerHighest
+                                              .withAlpha(100),
+                                          child: ListTile(
+                                            leading: const Icon(
+                                              Icons.calendar_month,
+                                              color: Colors.green,
+                                            ),
+                                            title: Text(
+                                              plan.title,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            subtitle: Text(
+                                              '${plan.totalWeeks} Weeks',
+                                            ),
+                                            trailing: const Icon(
+                                              Icons.arrow_forward_ios,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
+                                            onTap: () {
+                                              Navigator.pop(ctx);
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      PlanDetailsScreen(
+                                                        planId: plan.id,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
+                                  ),
+                                ),
+                              );
+                              return; // Stop deletion flow
+                            }
+
+                            if (action == 'delete') {
+                              confirmDelete = true;
+                            }
+                          } else {
+                            // 3. Standard delete confirmation for un-shared workouts
+                            if (!context.mounted) return;
+                            final standardConfirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Workout?'),
+                                content: const Text(
+                                  'This will permanently delete this workout and all its historical execution logs. This cannot be undone.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text(
+                                      'Cancel',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (standardConfirm == true) {
+                              confirmDelete = true;
+                            }
+                          }
+
+                          // 4. Actually execute the deletion if confirmed
+                          // 4. Actually execute the deletion if confirmed
+                          if (confirmDelete) {
+                            await db.deleteWorkout(workout.id);
+
+                            // --- FIX: Aggressively wipe the Riverpod cache for everything! ---
                             ref.invalidate(dashboardControllerProvider);
+                            ref.invalidate(plansStreamProvider);
+                            ref.invalidate(planScheduleProvider);
+                            ref.invalidate(planDetailsProvider);
+                            // -----------------------------------------------------------------
+
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Workout deleted.')),
@@ -282,11 +441,16 @@ class WorkoutListSection extends ConsumerWidget {
       };
     }).toList();
 
-    final workout = await (db.select(
-      db.workouts,
-    )..where((t) => t.id.equals(workoutId))).getSingle();
     final appLocale = ref.read(userProfileProvider).appLocale;
-    handler.startWorkoutSequence(routine, workout.title, workout.id, appLocale);
+    handler.startWorkoutSequence(
+      routine,
+      targetWorkoutTitle,
+      workoutId,
+      appLocale,
+      planId:
+          null, // Optional: Because individual workouts don't belong to a plan
+      planDayId: null, // Optional
+    );
 
     if (!context.mounted) return;
     Navigator.push(
@@ -301,6 +465,119 @@ class WorkoutListSection extends ConsumerWidget {
     Workout workout,
   ) async {
     final db = ref.read(databaseProvider);
+
+    // --- NEW: VALIDATION CHECK & VIEW PLANS ROUTING ---
+    final planUsage = await (db.select(
+      db.workoutPlanDays,
+    )..where((t) => t.workoutId.equals(workout.id))).get();
+    final uniquePlanIds = planUsage.map((r) => r.planId).toSet().toList();
+
+    if (uniquePlanIds.length > 1) {
+      final affectedPlans = await (db.select(
+        db.workoutPlans,
+      )..where((t) => t.id.isIn(uniquePlanIds))).get();
+
+      if (!context.mounted) return;
+      final action = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Shared Workout'),
+            ],
+          ),
+          content: Text(
+            'This workout is actively used in ${affectedPlans.length} different workout plans.\n\nEditing it here will permanently change the routine for ALL of those plans.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'view'),
+              child: const Text(
+                'View Plans',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () => Navigator.pop(ctx, 'edit'),
+              child: const Text('Edit Anyway'),
+            ),
+          ],
+        ),
+      );
+
+      if (action == 'cancel' || action == null) return; // Stop if cancelled
+
+      if (action == 'view') {
+        if (!context.mounted) return;
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (ctx) => Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Plans Using This Workout',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ...affectedPlans.map(
+                  (plan) => Card(
+                    elevation: 0,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest.withAlpha(100),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.calendar_month,
+                        color: Colors.green,
+                      ),
+                      title: Text(
+                        plan.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text('${plan.totalWeeks} Weeks'),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx); // Close the bottom sheet
+                        // Route directly to the Plan Details Screen!
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PlanDetailsScreen(planId: plan.id),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+        return; // Stop the edit flow because they chose to view plans
+      }
+      // If action == 'edit', it naturally falls through to the editor logic below!
+    }
+    // -------------------------------------------------
+
     final rows = await db.getWorkoutDetails(workout.id);
     if (!context.mounted) return;
 

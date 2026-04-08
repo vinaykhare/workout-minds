@@ -50,10 +50,28 @@ class WorkoutExercises extends Table {
 class WorkoutLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get workoutId => integer().references(Workouts, #id)();
+  IntColumn get planId => integer().nullable().references(WorkoutPlans, #id)();
   DateTimeColumn get executedAt => dateTime().withDefault(currentDateAndTime)();
   RealColumn get totalVolume => real()();
   IntColumn get durationMinutes => integer()();
   TextColumn get executionFeedback => text().nullable()(); // Added for Issue 4d
+}
+
+// --- NEW: Track historical completions of entire plans! ---
+class PlanLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get planId =>
+      integer().references(WorkoutPlans, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get completedAt =>
+      dateTime().withDefault(currentDateAndTime)();
+}
+
+// Helper class to return the joined data to the UI cleanly
+class PlanLogData {
+  final PlanLog log;
+  final WorkoutPlan plan;
+  PlanLogData(this.log, this.plan);
 }
 
 // 5. ExerciseLogs: Granular tracking of individual sets performed
@@ -81,6 +99,8 @@ class WorkoutPlans extends Table {
   TextColumn get goal => text().nullable()(); // e.g., "Fat Loss", "Muscle Gain"
   IntColumn get totalWeeks => integer().withDefault(const Constant(4))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get completedAt => dateTime().nullable()();
 }
 
 // 7. WorkoutPlanDays: Mapping workouts to specific days in the plan
@@ -101,6 +121,7 @@ class WorkoutPlanDays extends Table {
   )();
 
   TextColumn get notes => text().nullable()(); // e.g., "Focus on form today"
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
 }
 
 @DriftDatabase(
@@ -110,8 +131,9 @@ class WorkoutPlanDays extends Table {
     WorkoutExercises,
     WorkoutLogs,
     ExerciseLogs,
-    WorkoutPlans, // ADDED
-    WorkoutPlanDays, // ADDED
+    WorkoutPlans,
+    WorkoutPlanDays,
+    PlanLogs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -120,6 +142,12 @@ class AppDatabase extends _$AppDatabase {
   // Bumped to version 3!
   @override
   int get schemaVersion => 1;
+
+  // --- NEW: Toggle Day Completion ---
+  Future<void> togglePlanDayCompletion(int planDayId, bool isCompleted) {
+    return (update(workoutPlanDays)..where((t) => t.id.equals(planDayId)))
+        .write(WorkoutPlanDaysCompanion(isCompleted: Value(isCompleted)));
+  }
 
   // --- ALL EXISTING METHODS REMAIN UNCHANGED BELOW THIS LINE ---
 
@@ -139,6 +167,23 @@ class AppDatabase extends _$AppDatabase {
             (t) =>
                 OrderingTerm(expression: t.executedAt, mode: OrderingMode.desc),
           ]))
+        .get();
+  }
+
+  // --- NEW: Fetch historical workout logs for a specific plan run ---
+  Future<List<WorkoutLog>> getLogsForPlanInstance(
+    int planId,
+    DateTime start,
+    DateTime end,
+  ) {
+    return (select(workoutLogs)
+          ..where(
+            (t) =>
+                t.planId.equals(planId) &
+                t.executedAt.isBiggerOrEqualValue(start) &
+                t.executedAt.isSmallerOrEqualValue(end),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.executedAt)]))
         .get();
   }
 
@@ -184,6 +229,35 @@ class AppDatabase extends _$AppDatabase {
     return (delete(workouts)..where((t) => t.id.equals(workoutId))).go();
   }
 
+  Future<void> completePlanAndReset(int planId) async {
+    await transaction(() async {
+      // 1. Get the plan to find out when it started
+      final plan = await (select(
+        workoutPlans,
+      )..where((t) => t.id.equals(planId))).getSingle();
+
+      // 2. Create the historical log!
+      await into(planLogs).insert(
+        PlanLogsCompanion.insert(
+          planId: planId,
+          startedAt: plan.startDate ?? DateTime.now(),
+          completedAt: Value(DateTime.now()),
+        ),
+      );
+
+      // 3. Reset the plan to Day 1 so they can run it again
+      await (update(workoutPlans)..where((t) => t.id.equals(planId))).write(
+        const WorkoutPlansCompanion(
+          startDate: Value(null),
+          completedAt: Value(null),
+        ),
+      );
+
+      await (update(workoutPlanDays)..where((t) => t.planId.equals(planId)))
+          .write(const WorkoutPlanDaysCompanion(isCompleted: Value(false)));
+    });
+  }
+
   // Deletes a plan. (Cascade delete automatically wipes WorkoutPlanDays!)
   Future<void> deletePlan(int planId) {
     return (delete(workoutPlans)..where((t) => t.id.equals(planId))).go();
@@ -193,10 +267,12 @@ class AppDatabase extends _$AppDatabase {
     int workoutId,
     int calculatedVolume, {
     String? feedbackJson,
+    int? planId,
   }) async {
     await into(workoutLogs).insert(
       WorkoutLogsCompanion(
         workoutId: Value(workoutId),
+        planId: Value(planId),
         executedAt: Value(DateTime.now()),
         totalVolume: Value(calculatedVolume.toDouble()),
         durationMinutes: const Value(0),
@@ -309,7 +385,52 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<void> startPlan(int planId) {
+    return (update(workoutPlans)..where((t) => t.id.equals(planId))).write(
+      WorkoutPlansCompanion(startDate: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> resetPlanProgress(int planId) async {
+    await transaction(() async {
+      await (update(workoutPlans)..where((t) => t.id.equals(planId))).write(
+        const WorkoutPlansCompanion(
+          startDate: Value(null),
+          completedAt: Value(null),
+        ),
+      );
+      await (update(workoutPlanDays)..where((t) => t.planId.equals(planId)))
+          .write(const WorkoutPlanDaysCompanion(isCompleted: Value(false)));
+    });
+  }
+
+  Future<void> completePlan(int planId) {
+    return (update(workoutPlans)..where((t) => t.id.equals(planId))).write(
+      WorkoutPlansCompanion(completedAt: Value(DateTime.now())),
+    );
+  }
+
   // --- FIX 1: DEEP SEARCH WORKOUTS BY EXERCISE TITLE ---
+
+  // --- NEW: Stream for the Dashboard ---
+  Stream<List<PlanLogData>> watchRecentPlanLogs() {
+    final query =
+        select(planLogs).join([
+            innerJoin(workoutPlans, workoutPlans.id.equalsExp(planLogs.planId)),
+          ])
+          ..orderBy([OrderingTerm.desc(planLogs.completedAt)])
+          ..limit(5); // Show last 5 completed plans
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return PlanLogData(
+          row.readTable(planLogs),
+          row.readTable(workoutPlans),
+        );
+      }).toList();
+    });
+  }
+
   Stream<List<Workout>> watchFilteredWorkouts(String query) {
     if (query.trim().isEmpty) {
       return (select(

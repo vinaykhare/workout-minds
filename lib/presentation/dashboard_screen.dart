@@ -10,7 +10,9 @@ import 'package:workout_minds/presentation/widgets/weekly_progress_card.dart';
 import 'package:workout_minds/presentation/widgets/workout_list_section.dart';
 import 'package:workout_minds/presentation/workout_builder/manual_plan_builder_screen.dart';
 import 'package:workout_minds/presentation/workout_builder/plan_details_screen.dart';
+import 'package:workout_minds/presentation/workout_builder/plan_log_summary_screen.dart';
 import 'package:workout_minds/presentation/workout_builder/workout_builder_screen.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
 
@@ -22,6 +24,89 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  Widget _buildRecentPlanLogsSection(WidgetRef ref) {
+    final planLogsAsync = ref.watch(recentPlanLogsProvider);
+
+    return planLogsAsync.when(
+      data: (logs) {
+        if (logs.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+
+        return SliverList(
+          delegate: SliverChildListDelegate([
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
+              child: Text(
+                'Plan Trophies',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...logs.map((data) {
+              final months = [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec',
+              ];
+              final start = data.log.startedAt;
+              final end = data.log.completedAt;
+              final dateString =
+                  '${months[start.month - 1]} ${start.day} - ${months[end.month - 1]} ${end.day}, ${end.year}';
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                color: Colors.orangeAccent.withAlpha(20),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(color: Colors.orangeAccent.withAlpha(100)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PlanLogSummaryScreen(planLogData: data),
+                      ),
+                    );
+                  },
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.orangeAccent,
+                    foregroundColor: Colors.black,
+                    child: Icon(Icons.emoji_events),
+                  ),
+                  title: Text(
+                    data.plan.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    dateString,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.check_circle, color: Colors.green),
+                ),
+              );
+            }),
+          ]),
+        );
+      },
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (err, stack) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // FIX 1: Watch the new filtered stream directly!
@@ -419,6 +504,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const SliverToBoxAdapter(
                               child: WeeklyProgressCard(),
                             ),
+                            _buildRecentPlanLogsSection(ref),
                             // Search Bar for wide screens
                             SliverToBoxAdapter(child: buildSearchBar()),
                             const SliverToBoxAdapter(
@@ -447,6 +533,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   slivers: [
                     const SliverToBoxAdapter(child: WeeklyProgressCard()),
                     // Search Bar for mobile screens
+                    _buildRecentPlanLogsSection(ref),
                     SliverToBoxAdapter(child: buildSearchBar()),
                     const SliverToBoxAdapter(child: RecentWorkoutsSection()),
                     SliverToBoxAdapter(child: buildPlansSection()),
@@ -622,10 +709,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         setState(() => isGeneratingPlan = true);
 
                         try {
+                          final profile = ref.read(userProfileProvider);
                           // Call our new AI Plan Repository
                           final planId = await ref
                               .read(aiPlanRepositoryProvider)
-                              .generateAndSavePlan(prompt);
+                              .generateAndSavePlan(prompt, profile);
 
                           if (dialogContext.mounted) {
                             Navigator.pop(dialogContext); // Close dialog

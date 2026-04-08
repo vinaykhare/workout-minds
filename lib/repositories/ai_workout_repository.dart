@@ -213,6 +213,163 @@ class AIWorkoutRepository {
       }
     }
   }
+
+  // =====================================================================
+  // MID-WORKOUT OPTIMIZATION LOOP
+  // =====================================================================
+  Future<void> optimizeWorkout(int workoutId, UserProfile profile) async {
+    try {
+      // 1. Fetch current workout & its exercises to give Gemini context
+      final workout = await (_db.select(
+        _db.workouts,
+      )..where((t) => t.id.equals(workoutId))).getSingle();
+      final currentExercises = await _db.getWorkoutDetails(workoutId);
+
+      String currentWorkoutContext =
+          "Workout Title: ${workout.title}\nCurrent Exercises:\n";
+      for (var row in currentExercises) {
+        final ex = row.readTable(_db.exercises);
+        final details = row.readTable(_db.workoutExercises);
+        currentWorkoutContext +=
+            "- ${ex.name} (${details.targetSets} sets x ${details.targetReps ?? details.targetDurationSeconds ?? '?'})\n";
+      }
+
+      // 2. Fetch the recent execution feedback
+      final recentLogs =
+          await (_db.select(_db.workoutLogs)
+                ..where((t) => t.executionFeedback.isNotNull())
+                ..orderBy([(t) => OrderingTerm.desc(t.executedAt)])
+                ..limit(20))
+              .get();
+
+      String feedbackContext = "";
+      for (var log in recentLogs) {
+        if (log.executionFeedback != null &&
+            log.executionFeedback!.length > 5) {
+          try {
+            final Map<String, dynamic> feedbackMap = jsonDecode(
+              log.executionFeedback!,
+            );
+            feedbackMap.forEach((exercise, note) {
+              feedbackContext += "- $exercise: $note\n";
+            });
+          } catch (_) {}
+        }
+      }
+
+      if (feedbackContext.trim().isEmpty) {
+        throw Exception(
+          "No execution feedback found yet! Log some 'Too Hard' or 'Too Easy' issues during a workout first.",
+        );
+      }
+
+      // 3. Prompt Gemini to adapt this specific workout
+      final prompt =
+          '''
+      You are an elite AI personal trainer. 
+      The user wants to OPTIMIZE their existing workout based on recent feedback.
+
+      --- USER PROFILE ---
+      Gender: ${profile.gender}
+      Experience Level: ${profile.experienceLevel}
+      
+      --- CURRENT WORKOUT ---
+      $currentWorkoutContext
+
+      --- CRITICAL RECENT FEEDBACK ---
+      The user recently struggled with or breezed through the following exercises:
+      $feedbackContext
+
+      Your task is to REWRITE and OPTIMIZE this specific workout. 
+      You MUST adjust the target sets, reps, durations, weights, or swap exercises entirely based on the feedback provided above (Apply Progressive Overload or Regression).
+      Keep the "workout_title" similar but you can add a flair.
+      Output the new workout using the exact same JSON schema.
+      ''';
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      final responseText = response.text;
+
+      if (responseText == null || responseText.isEmpty) {
+        throw Exception("AI returned an empty response.");
+      }
+
+      // Strip markdown just in case
+      String cleanJson = responseText
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+      final Map<String, dynamic> data = jsonDecode(cleanJson);
+
+      // 4. Safely apply the changes to the database
+      await _db.transaction(() async {
+        // Update the workout title
+        await (_db.update(
+          _db.workouts,
+        )..where((t) => t.id.equals(workoutId))).write(
+          WorkoutsCompanion(
+            title: Value("✨ Optimized: ${data['workout_title']}"),
+          ),
+        );
+
+        // Wipe the old exercises for this workout
+        await (_db.delete(
+          _db.workoutExercises,
+        )..where((t) => t.workoutId.equals(workoutId))).go();
+
+        final exercisesList = data['exercises'] as List<dynamic>;
+        for (var i = 0; i < exercisesList.length; i++) {
+          final item = exercisesList[i];
+          final String exerciseName = item['exercise_name'] as String;
+
+          int exId;
+          final existingEx =
+              await (_db.select(_db.exercises)
+                    ..where((t) => t.name.equals(exerciseName))
+                    ..limit(1))
+                  .getSingleOrNull();
+
+          if (existingEx != null) {
+            exId = existingEx.id;
+          } else {
+            exId = await _db
+                .into(_db.exercises)
+                .insert(
+                  ExercisesCompanion.insert(
+                    name: exerciseName,
+                    muscleGroup: item['muscle_group'] ?? 'Custom',
+                    isCustom: const Value(false),
+                    imageUrl: Value(item['image_url'] as String?),
+                    equipment: Value(item['equipment'] as String?),
+                  ),
+                );
+          }
+
+          await _db
+              .into(_db.workoutExercises)
+              .insert(
+                WorkoutExercisesCompanion.insert(
+                  workoutId: workoutId,
+                  exerciseId: exId,
+                  orderIndex: i,
+                  targetSets: item['target_sets'] as int,
+                  targetReps: Value(item['target_reps'] as int?),
+                  targetDurationSeconds: Value(
+                    (item['target_duration_seconds'] as num?)?.toInt(),
+                  ),
+                  targetWeight: Value(
+                    (item['target_weight'] as num?)?.toDouble(),
+                  ),
+                  restSecondsAfterSet: (item['rest_seconds_set'] as int?) ?? 60,
+                  restSecondsAfterExercise:
+                      (item['rest_seconds_exercise'] as int?) ?? 90,
+                ),
+              );
+        }
+      });
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 }
 
 final List<Tool> workoutTools = [

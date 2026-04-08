@@ -310,7 +310,15 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           handler.currentWorkoutId!,
           100,
           feedbackJson: feedbackJson,
+          planId: handler.currentPlanId,
         );
+        // Auto-Complete the Day in the Plan!
+        if (handler.currentPlanDayId != null) {
+          await db.togglePlanDayCompletion(handler.currentPlanDayId!, true);
+          ref.invalidate(
+            planScheduleProvider,
+          ); // Force details screen to show checkbox!
+        }
         ref.invalidate(weeklyStatsProvider);
 
         // --- NEW: EVENT-DRIVEN CLOUD SYNC ---
@@ -331,7 +339,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     final handler = ref.read(audioHandlerProvider);
-
+    final isPlanWorkout = handler.currentPlanId != null;
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.black,
@@ -428,7 +436,9 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                       // ==========================================
                       // LANDSCAPE MODE (2-Column Unified Layout)
                       // ==========================================
-                      if (isLandscape && !_isFullScreenImage) {
+                      if (isLandscape &&
+                          !_isFullScreenImage &&
+                          stateType != 'outro') {
                         return Row(
                           children: [
                             // LEFT COLUMN: Visuals & Context
@@ -589,6 +599,56 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
+                                    ),
+                                    const Spacer(),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        // --- FIX: Only show Restart if it's NOT a plan! ---
+                                        if (!isPlanWorkout) ...[
+                                          FilledButton.icon(
+                                            icon: const Icon(Icons.refresh),
+                                            label: const Text(
+                                              'Restart Workout',
+                                            ),
+                                            onPressed: () =>
+                                                handler.restartWorkout(),
+                                            style: FilledButton.styleFrom(
+                                              padding: const EdgeInsets.all(16),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        // --- FIX: Dynamic Home / Plan Button ---
+                                        OutlinedButton.icon(
+                                          icon: Icon(
+                                            isPlanWorkout
+                                                ? Icons.fact_check
+                                                : Icons.home,
+                                            color: Colors.white,
+                                          ),
+                                          label: Text(
+                                            isPlanWorkout
+                                                ? 'Go to Plan & Check Progress'
+                                                : 'Go Home / Dashboard',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          onPressed: () async =>
+                                              await handler.stop(),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                              color: Colors.white,
+                                            ),
+                                            padding: const EdgeInsets.all(16),
+                                            backgroundColor: isPlanWorkout
+                                                ? Colors.green.withAlpha(60)
+                                                : Colors.transparent,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ],
@@ -821,32 +881,70 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                                       },
                                     ),
                                   ] else if (stateType == 'outro') ...[
-                                    FilledButton.icon(
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Restart Workout'),
-                                      onPressed: () => handler.restartWorkout(),
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.all(16),
-                                      ),
+                                    const Icon(
+                                      Icons.emoji_events,
+                                      size: 100,
+                                      color: Colors.amber,
                                     ),
-                                    const SizedBox(height: 16),
-                                    OutlinedButton.icon(
-                                      icon: const Icon(
-                                        Icons.home,
+                                    const SizedBox(height: 24),
+                                    const Text(
+                                      "Workout Complete!",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
-                                      label: const Text(
-                                        'Go Home / Dashboard',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                      onPressed: () async =>
-                                          await handler.stop(),
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(
-                                          color: Colors.white,
+                                    ),
+                                    const Spacer(),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        // --- FIX: Only show Restart if it's NOT a plan! ---
+                                        if (!isPlanWorkout) ...[
+                                          FilledButton.icon(
+                                            icon: const Icon(Icons.refresh),
+                                            label: const Text(
+                                              'Restart Workout',
+                                            ),
+                                            onPressed: () =>
+                                                handler.restartWorkout(),
+                                            style: FilledButton.styleFrom(
+                                              padding: const EdgeInsets.all(16),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        // --- FIX: Dynamic Home / Plan Button ---
+                                        OutlinedButton.icon(
+                                          icon: Icon(
+                                            isPlanWorkout
+                                                ? Icons.fact_check
+                                                : Icons.home,
+                                            color: Colors.white,
+                                          ),
+                                          label: Text(
+                                            isPlanWorkout
+                                                ? 'Go to Plan & Check Progress'
+                                                : 'Go Home / Dashboard',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          onPressed: () async =>
+                                              await handler.stop(),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                              color: Colors.white,
+                                            ),
+                                            padding: const EdgeInsets.all(16),
+                                            backgroundColor: isPlanWorkout
+                                                ? Colors.green.withAlpha(60)
+                                                : Colors.transparent,
+                                          ),
                                         ),
-                                        padding: const EdgeInsets.all(16),
-                                      ),
+                                      ],
                                     ),
                                   ],
 
@@ -1232,28 +1330,39 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                FilledButton.icon(
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Restart Workout'),
-                                  onPressed: () => handler.restartWorkout(),
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.all(16),
+                                // --- FIX: Only show Restart if it's NOT a plan! ---
+                                if (!isPlanWorkout) ...[
+                                  FilledButton.icon(
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Restart Workout'),
+                                    onPressed: () => handler.restartWorkout(),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.all(16),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 12),
+                                  const SizedBox(height: 12),
+                                ],
+                                // --- FIX: Dynamic Home / Plan Button ---
                                 OutlinedButton.icon(
-                                  icon: const Icon(
-                                    Icons.home,
+                                  icon: Icon(
+                                    isPlanWorkout
+                                        ? Icons.fact_check
+                                        : Icons.home,
                                     color: Colors.white,
                                   ),
-                                  label: const Text(
-                                    'Go Home / Dashboard',
-                                    style: TextStyle(color: Colors.white),
+                                  label: Text(
+                                    isPlanWorkout
+                                        ? 'Go to Plan & Check Progress'
+                                        : 'Go Home / Dashboard',
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                   onPressed: () async => await handler.stop(),
                                   style: OutlinedButton.styleFrom(
                                     side: const BorderSide(color: Colors.white),
                                     padding: const EdgeInsets.all(16),
+                                    backgroundColor: isPlanWorkout
+                                        ? Colors.green.withAlpha(60)
+                                        : Colors.transparent,
                                   ),
                                 ),
                               ],

@@ -3,6 +3,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class WorkoutAudioHandler extends BaseAudioHandler {
+  int? currentPlanId;
+  int? currentPlanDayId;
   int _workoutSessionId = 0; // NEW: Tracks the current async session
   bool _isRestarting = false; // NEW: Flag to suppress abort signals
   final StreamController<bool> _workoutAbortedController =
@@ -45,11 +47,15 @@ class WorkoutAudioHandler extends BaseAudioHandler {
     List<Map<String, dynamic>> routine,
     String workoutTitle,
     int workoutId,
-    String appLocale,
-  ) async {
+    String appLocale, {
+    int? planId,
+    int? planDayId,
+  }) async {
     // 1. Increment the session ID immediately
     _workoutSessionId++;
     final int currentSession = _workoutSessionId;
+    currentPlanId = planId;
+    currentPlanDayId = planDayId;
 
     if (_isWorkoutActive) {
       // FIX 1: Set the flag before stopping so it doesn't trigger a UI pop!
@@ -365,6 +371,8 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       _workoutTitle,
       currentWorkoutId!,
       _currentLanguage,
+      planId: currentPlanId,
+      planDayId: currentPlanDayId,
     );
   }
 

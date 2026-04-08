@@ -316,3 +316,8 @@ final planScheduleProvider = FutureProvider.family<List<TypedResult>, int>((
 ) {
   return ref.watch(databaseProvider).getPlanSchedule(planId);
 });
+
+// Add this near your other stream providers (like `recentHistoryProvider`)
+final recentPlanLogsProvider = StreamProvider<List<PlanLogData>>((ref) {
+  return ref.read(databaseProvider).watchRecentPlanLogs();
+});

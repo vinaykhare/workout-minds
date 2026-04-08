@@ -82,7 +82,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           "Create a perfectly balanced 4-week baseline workout plan based on my profile.";
 
       // FIX: Use the Plan Repository to generate a full month-long plan!
-      await ref.read(aiPlanRepositoryProvider).generateAndSavePlan(aiPrompt);
+      await ref
+          .read(aiPlanRepositoryProvider)
+          .generateAndSavePlan(aiPrompt, newProfile);
 
       // Force refresh the dashboard streams so it appears instantly
       ref.invalidate(plansStreamProvider);
