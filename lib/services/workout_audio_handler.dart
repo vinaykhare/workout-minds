@@ -129,15 +129,21 @@ class WorkoutAudioHandler extends BaseAudioHandler {
 
     await flutterTts.stop();
 
+    // --- NEW: Grab instructions to auto-speak! ---
+    final instructions = ex['instructions'] as String?;
+    final instructionText = (instructions != null && instructions.isNotEmpty)
+        ? " $instructions"
+        : "";
+
     if (ex['durationSeconds'] != null && (ex['durationSeconds'] as int) > 0) {
       _currentScreenState = 'exercise_time';
       _currentTimerSeconds = ex['durationSeconds'] as int;
       _pushStateToUi();
 
       final speech = _currentLanguage == 'hi'
-          ? "Agla hai: ${ex['name']}, $_currentTimerSeconds seconds ke liye."
-          : "Next up: ${ex['name']}, for $_currentTimerSeconds seconds.";
-      await flutterTts.speak(speech);
+          ? "Agla hai: ${ex['name']}, $_currentTimerSeconds seconds ke liye.$instructionText"
+          : "Next up: ${ex['name']}, for $_currentTimerSeconds seconds.$instructionText";
+      flutterTts.speak(speech).ignore();
 
       _startCountdownTimer();
     } else {
@@ -145,9 +151,9 @@ class WorkoutAudioHandler extends BaseAudioHandler {
       _pushStateToUi();
 
       final speech = _currentLanguage == 'hi'
-          ? "Agla hai: ${ex['name']}, ${ex['reps']} reps."
-          : "Next up: ${ex['name']}, ${ex['reps']} reps.";
-      await flutterTts.speak(speech);
+          ? "Agla hai: ${ex['name']}, ${ex['reps']} reps.$instructionText"
+          : "Next up: ${ex['name']}, ${ex['reps']} reps.$instructionText";
+      flutterTts.speak(speech).ignore();
     }
   }
 
@@ -176,7 +182,7 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         final speech = _currentLanguage == 'hi'
             ? "$_currentTimerSeconds seconds aaram karein."
             : "Rest for $_currentTimerSeconds seconds.";
-        await flutterTts.speak(speech);
+        flutterTts.speak(speech).ignore();
 
         _startCountdownTimer();
       } else if (!isLastExercise) {
@@ -189,7 +195,7 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         final speech = _currentLanguage == 'hi'
             ? "Exercise khatam. $_currentTimerSeconds seconds aaram karein."
             : "Exercise complete. Rest for $_currentTimerSeconds seconds.";
-        await flutterTts.speak(speech);
+        flutterTts.speak(speech).ignore();
 
         _startCountdownTimer();
       } else {
@@ -199,7 +205,7 @@ class WorkoutAudioHandler extends BaseAudioHandler {
         final speech = _currentLanguage == 'hi'
             ? "Workout poora hua! Bahut badhiya."
             : "Workout Complete! Great job.";
-        await flutterTts.speak(speech);
+        flutterTts.speak(speech).ignore();
 
         _workoutCompleteController.add(true);
       }

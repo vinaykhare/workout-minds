@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
@@ -18,13 +20,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   String _gender = '';
   String _goal = '';
-  String _experience = '';
+  String _preferredStyle = ''; // <--- NEW: Added State Variable
+  int _pushups = 5;
+  int _pullups = 0;
+  int _squats = 15;
   double _height = 170.0;
   double _weight = 70.0;
 
   void _nextPage() {
     FocusScope.of(context).unfocus();
-    if (_currentPage < 4) {
+    if (_currentPage < 5) {
+      // <--- FIX 1: Bumped to 5 because we now have 6 pages!
       _pageController.animateToPage(
         _currentPage + 1,
         duration: const Duration(milliseconds: 300),
@@ -35,40 +41,60 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  void _previousPage() {
+    FocusScope.of(context).unfocus();
+    if (_currentPage > 0) {
+      _pageController.animateToPage(
+        _currentPage - 1,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   Future<void> _finishOnboarding() async {
-    // 1. Save the profile FIRST so if the AI fails, they don't have to redo the form!
-    final currentLocale = ref.read(userProfileProvider).appLocale;
+    final l10n = AppLocalizations.of(context)!;
+    final currentProfile = ref.read(
+      userProfileProvider,
+    ); // Grab current to preserve AutoSync!
+
     final newProfile = UserProfile(
       hasOnboarded: true,
-      appLocale: currentLocale,
+      appLocale: currentProfile.appLocale,
+      themeMode: currentProfile.themeMode,
       gender: _gender,
       goal: _goal,
-      experienceLevel: _experience,
+      preferredStyle: _preferredStyle.isEmpty
+          ? 'Full Gym'
+          : _preferredStyle, // Ensure fallback
+      pushupCapacity: _pushups,
+      pullupCapacity: _pullups,
+      squatCapacity: _squats,
       heightCm: _height,
       weightKg: _weight,
       aiCredits: 3,
       isPro: false,
       customApiKey: '',
       customModelName: '',
-      isAutoSyncEnabled: false,
+      isAutoSyncEnabled: currentProfile
+          .isAutoSyncEnabled, // <--- FIX: Preserve Drive Connection!
     );
     await ref.read(userProfileProvider.notifier).saveProfile(newProfile);
 
-    // 2. Show a loading overlay
     if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (context) => Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Generating your first custom plan...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(l10n.generatingPlan),
               ],
             ),
           ),
@@ -76,25 +102,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ),
     );
 
-    // 3. Trigger the AI to build a baseline routine
     try {
       final aiPrompt =
           "Create a perfectly balanced 4-week baseline workout plan based on my profile.";
-
-      // FIX: Use the Plan Repository to generate a full month-long plan!
       await ref
           .read(aiPlanRepositoryProvider)
           .generateAndSavePlan(aiPrompt, newProfile);
-
-      // Force refresh the dashboard streams so it appears instantly
       ref.invalidate(plansStreamProvider);
       ref.invalidate(workoutsStreamProvider);
+      // --- FIX 1: FIRE BACKGROUND SYNC AFTER ONBOARDING ---
+      if (newProfile.isAutoSyncEnabled) {
+        final profileJsonString = jsonEncode(newProfile.toJson());
+        ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
+      }
     } catch (e) {
-      debugPrint('=== AI GENERATION FAILED DURING ONBOARDING ===');
-      debugPrint(e.toString());
-
       if (mounted) {
-        // Show the error so it doesn't fail silently!
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('AI Generation failed: $e'),
@@ -105,11 +127,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
     }
 
-    // 4. Remove the loading overlay
     if (!mounted) return;
     Navigator.pop(context);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      (route) => false,
+    );
+  }
 
-    // 5. EXPLICIT NAVIGATION: Force the app to clear the onboarding stack and go to the Dashboard
+  Future<void> _skipOnboarding() async {
+    final currentProfile = ref.read(userProfileProvider);
+
+    final newProfile = UserProfile(
+      hasOnboarded: true, // Gets them out of the Welcome loop!
+      appLocale: currentProfile.appLocale,
+      themeMode: currentProfile.themeMode,
+      gender: _gender.isEmpty ? 'Other' : _gender,
+      goal: _goal.isEmpty ? 'Stay Fit' : _goal,
+      preferredStyle: _preferredStyle.isEmpty ? 'Full Gym' : _preferredStyle,
+      pushupCapacity: _pushups,
+      pullupCapacity: _pullups,
+      squatCapacity: _squats,
+      heightCm: _height,
+      weightKg: _weight,
+      aiCredits: currentProfile.aiCredits, // Preserve their 3 free credits!
+      isPro: currentProfile.isPro,
+      customApiKey: currentProfile.customApiKey,
+      customModelName: currentProfile.customModelName,
+      isAutoSyncEnabled: currentProfile.isAutoSyncEnabled,
+    );
+
+    await ref.read(userProfileProvider.notifier).saveProfile(newProfile);
+
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const DashboardScreen()),
@@ -120,7 +169,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: _currentPage > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _previousPage,
+              )
+            : null,
+        actions: [
+          TextButton(
+            onPressed: _skipOnboarding,
+            child: Text(l10n.skip, style: const TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -130,7 +196,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 vertical: 16.0,
               ),
               child: LinearProgressIndicator(
-                value: (_currentPage + 1) / 5, // 5 pages total
+                value: (_currentPage + 1) / 6, // <--- FIX 1: Bumped total to 6
                 borderRadius: BorderRadius.circular(8),
                 minHeight: 8,
               ),
@@ -142,11 +208,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 onPageChanged: (int page) =>
                     setState(() => _currentPage = page),
                 children: [
-                  _buildLanguagePage(),
+                  _buildLanguagePage(l10n),
                   _buildGenderPage(l10n),
-                  _buildGoalPage(),
-                  _buildExperiencePage(),
-                  _buildMetricsPage(),
+                  _buildGoalPage(l10n),
+                  _buildStylePage(l10n), // <--- NEW: The Missing Style Page!
+                  _buildAssessmentPage(l10n),
+                  _buildMetricsPage(l10n),
                 ],
               ),
             ),
@@ -156,40 +223,72 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 1: LANGUAGE ---
-  Widget _buildLanguagePage() {
-    final currentLocale = ref.watch(userProfileProvider).appLocale;
+  // --- PAGE 1: LANGUAGE & THEME ---
+  Widget _buildLanguagePage(AppLocalizations l10n) {
+    final profile = ref.watch(userProfileProvider);
+    final notifier = ref.read(userProfileProvider.notifier);
 
     return _PageTemplate(
-      title: 'Choose Language\nBhasha Chunein',
-      subtitle: 'How would you like the app to talk to you?',
+      title: 'Preferences', // You can localize this later if you want!
+      subtitle: l10n.chooseLanguageSub,
       content: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SelectionCard(
             title: 'English',
             subtitle: 'Standard English',
             icon: Icons.language,
-            isSelected: currentLocale == 'en',
-            onTap: () async {
-              await ref
-                  .read(userProfileProvider.notifier)
-                  .updateField('appLocale', 'en');
-              _nextPage();
-            },
+            isSelected: profile.appLocale == 'en',
+            // FIX: Removed _nextPage() here!
+            onTap: () => notifier.updateField('appLocale', 'en'),
           ),
           const SizedBox(height: 16),
           _SelectionCard(
             title: 'Hinglish',
             subtitle: 'Conversational Indian English',
             icon: Icons.chat_bubble_outline,
-            isSelected: currentLocale == 'hi',
-            onTap: () async {
-              await ref
-                  .read(userProfileProvider.notifier)
-                  .updateField('appLocale', 'hi');
-              _nextPage();
-            },
+            isSelected: profile.appLocale == 'hi',
+            // FIX: Removed _nextPage() here!
+            onTap: () => notifier.updateField('appLocale', 'hi'),
+          ),
+          const SizedBox(height: 48),
+
+          // --- THEME SELECTOR ---
+          Text(
+            l10n.themeTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(
+                value: 'system',
+                icon: const Icon(Icons.settings_suggest),
+                label: Text(l10n.themeSystem),
+              ),
+              ButtonSegment(
+                value: 'light',
+                icon: const Icon(Icons.light_mode),
+                label: Text(l10n.themeLight),
+              ),
+              ButtonSegment(
+                value: 'dark',
+                icon: const Icon(Icons.dark_mode),
+                label: Text(l10n.themeDark),
+              ),
+            ],
+            selected: {profile.themeMode},
+            onSelectionChanged: (set) =>
+                notifier.updateField('themeMode', set.first),
+          ),
+          const SizedBox(height: 48),
+
+          // The user clicks this when they are done!
+          FilledButton(
+            onPressed: _nextPage,
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
+            child: const Text('Next', style: TextStyle(fontSize: 18)),
           ),
         ],
       ),
@@ -215,7 +314,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 16),
           _SelectionCard(
-            title: 'Female',
+            title: l10n.genderFemale,
             icon: Icons.female,
             isSelected: _gender == 'Female',
             onTap: () {
@@ -225,7 +324,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 16),
           _SelectionCard(
-            title: 'Other / Prefer not to say',
+            title: l10n.genderOther,
             icon: Icons.person,
             isSelected: _gender == 'Other',
             onTap: () {
@@ -239,15 +338,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   // --- PAGE 3: GOAL ---
-  Widget _buildGoalPage() {
+  Widget _buildGoalPage(AppLocalizations l10n) {
     return _PageTemplate(
-      title: "What is your primary goal?",
-      subtitle: "We'll tailor your AI-generated workouts to focus on this.",
+      title: l10n.goalTitle,
+      subtitle: l10n.goalSub,
       content: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _SelectionCard(
-            title: 'Lose Weight',
+            title: l10n.goalWeight,
             icon: Icons.monitor_weight_outlined,
             isSelected: _goal == 'Lose Weight',
             onTap: () {
@@ -257,7 +356,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 16),
           _SelectionCard(
-            title: 'Build Muscle',
+            title: l10n.goalMuscle,
             icon: Icons.fitness_center,
             isSelected: _goal == 'Build Muscle',
             onTap: () {
@@ -267,7 +366,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 16),
           _SelectionCard(
-            title: 'Stay Fit & Active',
+            title: l10n.goalFit,
             icon: Icons.directions_run,
             isSelected: _goal == 'Stay Fit',
             onTap: () {
@@ -280,43 +379,50 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 4: EXPERIENCE ---
-  Widget _buildExperiencePage() {
+  // --- PAGE 4: STYLE / EQUIPMENT ---
+  Widget _buildStylePage(AppLocalizations l10n) {
     return _PageTemplate(
-      title: "What is your fitness level?",
-      subtitle: "Ensures the exercises aren't too easy or too dangerous.",
+      title: l10n.styleTitle,
+      subtitle: 'What equipment do you have access to?',
       content: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _SelectionCard(
-            title: 'Beginner',
-            subtitle: 'Just starting out.',
-            icon: Icons.battery_1_bar,
-            isSelected: _experience == 'Beginner',
+            title: l10n.styleGym,
+            icon: Icons.domain,
+            isSelected: _preferredStyle == 'Full Gym',
             onTap: () {
-              setState(() => _experience = 'Beginner');
+              setState(() => _preferredStyle = 'Full Gym');
               _nextPage();
             },
           ),
           const SizedBox(height: 16),
           _SelectionCard(
-            title: 'Intermediate',
-            subtitle: 'I train somewhat consistently.',
-            icon: Icons.battery_4_bar,
-            isSelected: _experience == 'Intermediate',
+            title: l10n.styleDumbbell,
+            icon: Icons.fitness_center,
+            isSelected: _preferredStyle == 'Home (Dumbbells/Bands)',
             onTap: () {
-              setState(() => _experience = 'Intermediate');
+              setState(() => _preferredStyle = 'Home (Dumbbells/Bands)');
               _nextPage();
             },
           ),
           const SizedBox(height: 16),
           _SelectionCard(
-            title: 'Advanced',
-            subtitle: 'I am a seasoned gym-goer.',
-            icon: Icons.battery_full,
-            isSelected: _experience == 'Advanced',
+            title: l10n.styleBodyweight,
+            icon: Icons.accessibility_new,
+            isSelected: _preferredStyle == 'Bodyweight Only',
             onTap: () {
-              setState(() => _experience = 'Advanced');
+              setState(() => _preferredStyle = 'Bodyweight Only');
+              _nextPage();
+            },
+          ),
+          const SizedBox(height: 16),
+          _SelectionCard(
+            title: l10n.styleYoga,
+            icon: Icons.self_improvement,
+            isSelected: _preferredStyle == 'Yoga & Flexibility',
+            onTap: () {
+              setState(() => _preferredStyle = 'Yoga & Flexibility');
               _nextPage();
             },
           ),
@@ -325,18 +431,130 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- PAGE 5: METRICS ---
-  Widget _buildMetricsPage() {
+  // --- PAGE 5: PHYSICAL ASSESSMENT ---
+  Widget _buildAssessmentPage(AppLocalizations l10n) {
     return _PageTemplate(
-      title: "Let's get your metrics",
-      subtitle: "Used to calculate your BMI and daily caloric burn.",
+      title: l10n.assessTitle,
+      subtitle: l10n.assessSub,
       content: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Height (cm)',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            l10n.assessPushups,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _pushups.toDouble(),
+                  min: 0,
+                  max: 100,
+                  divisions: 100,
+                  activeColor: Colors.blueAccent,
+                  onChanged: (val) => setState(() => _pushups = val.toInt()),
+                ),
+              ),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '$_pushups',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          Text(
+            l10n.assessPullups,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _pullups.toDouble(),
+                  min: 0,
+                  max: 50,
+                  divisions: 50,
+                  activeColor: Colors.redAccent,
+                  onChanged: (val) => setState(() => _pullups = val.toInt()),
+                ),
+              ),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '$_pullups',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          Text(
+            l10n.assessSquats,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _squats.toDouble(),
+                  min: 0,
+                  max: 200,
+                  divisions: 100,
+                  activeColor: Colors.green,
+                  onChanged: (val) => setState(() => _squats = val.toInt()),
+                ),
+              ),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '$_squats',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 48),
+
+          FilledButton(
+            onPressed: _nextPage,
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
+            child: const Text('Next', style: TextStyle(fontSize: 18)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- PAGE 6: METRICS ---
+  Widget _buildMetricsPage(AppLocalizations l10n) {
+    return _PageTemplate(
+      title: l10n.metricsTitle,
+      subtitle: l10n.metricsSub,
+      content: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.heightLabel,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Row(
             children: [
@@ -359,9 +577,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ],
           ),
           const SizedBox(height: 32),
-          const Text(
-            'Weight (kg)',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            l10n.weightLabel,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Row(
             children: [
@@ -384,10 +602,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ],
           ),
           const SizedBox(height: 48),
-          FilledButton(
+          FilledButton.icon(
             onPressed: _finishOnboarding,
-            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16)),
-            child: const Text('Finish Setup', style: TextStyle(fontSize: 18)),
+            icon: const Icon(Icons.auto_awesome, color: Colors.amberAccent),
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
+            label: Text(
+              l10n.generateAiPlan,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: _skipOnboarding,
+            child: Text(
+              l10n.skipAi,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
           ),
         ],
       ),
@@ -410,33 +640,38 @@ class _PageTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 18, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: const TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+              ),
+              SliverFillRemaining(hasScrollBody: false, child: content),
+            ],
           ),
-          SliverFillRemaining(hasScrollBody: false, child: content),
-        ],
+        ),
       ),
     );
   }

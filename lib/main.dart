@@ -108,9 +108,11 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
     if (workoutData != null) {
       ReceiveSharingIntent.instance.reset(); // Clean up OS intent
 
-      // FIX 1: Instead of trying to force navigation on a frozen screen,
-      // we just tell Riverpod that a file is waiting to be opened!
-      ref.read(pendingImportProvider.notifier).state = workoutData;
+      if (workoutData['type'] == 'plan' || workoutData.containsKey('plan')) {
+        ref.read(pendingPlanImportProvider.notifier).state = workoutData;
+      } else {
+        ref.read(pendingImportProvider.notifier).state = workoutData;
+      }
     } else {
       ReceiveSharingIntent.instance.reset();
       _scaffoldMessengerKey.currentState?.showSnackBar(
@@ -133,11 +135,24 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
+      // --- NEW THEME ENGINE ---
+      themeMode: userProfile.themeMode == 'light'
+          ? ThemeMode.light
+          : userProfile.themeMode == 'dark'
+          ? ThemeMode.dark
+          : ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blueAccent,
-        brightness: Brightness.dark,
+        brightness: Brightness.light, // Light Mode
+        scaffoldBackgroundColor: Colors.grey.shade50,
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blueAccent,
+        brightness: Brightness.dark, // Dark Mode
+      ),
+      // ------------------------
       home: userProfile.hasOnboarded
           ? const DashboardScreen()
           : const WelcomeScreen(),

@@ -94,4 +94,131 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get genderFemale => 'Female';
+
+  @override
+  String get welcomeSubtitle =>
+      'Your AI-powered fitness journey,\nsynced securely with Google Drive.';
+
+  @override
+  String get restoreGoogle => 'Restore from Google Drive';
+
+  @override
+  String get startFresh => 'Start Fresh';
+
+  @override
+  String get chooseLanguageTitle => 'Choose Language';
+
+  @override
+  String get chooseLanguageSub => 'How would you like the app to talk to you?';
+
+  @override
+  String get goalTitle => 'What is your primary goal?';
+
+  @override
+  String get goalSub =>
+      'We\'ll tailor your AI-generated workouts to focus on this.';
+
+  @override
+  String get goalWeight => 'Lose Weight';
+
+  @override
+  String get goalMuscle => 'Build Muscle';
+
+  @override
+  String get goalFit => 'Stay Fit & Active';
+
+  @override
+  String get assessTitle => 'Let\'s assess your strength';
+
+  @override
+  String get assessSub =>
+      'Be honest! This helps the AI set your starting difficulty.';
+
+  @override
+  String get assessPushups => 'Max Pushups in one go:';
+
+  @override
+  String get assessPullups => 'Max Pull-ups in one go:';
+
+  @override
+  String get assessSquats => 'Max Bodyweight Squats in one go:';
+
+  @override
+  String get metricsTitle => 'Let\'s get your metrics';
+
+  @override
+  String get metricsSub => 'Used to calculate your BMI and daily caloric burn.';
+
+  @override
+  String get heightLabel => 'Height (cm)';
+
+  @override
+  String get weightLabel => 'Weight (kg)';
+
+  @override
+  String get finishSetup => 'Finish Setup';
+
+  @override
+  String get genderOther => 'Other / Prefer not to say';
+
+  @override
+  String get generatingPlan => 'Generating your first custom plan...';
+
+  @override
+  String get settingsStrengthBaseline => 'Strength Baseline';
+
+  @override
+  String get settingsMaxPushups => 'Max Pushups';
+
+  @override
+  String get settingsMaxPullups => 'Max Pull-ups';
+
+  @override
+  String get settingsMaxSquats => 'Max Squats';
+
+  @override
+  String get styleTitle => 'Training Style';
+
+  @override
+  String get styleGym => 'Full Gym (All Equipment)';
+
+  @override
+  String get styleDumbbell => 'Home (Dumbbells & Bands)';
+
+  @override
+  String get styleBodyweight => 'Bodyweight Only (No Equipment)';
+
+  @override
+  String get styleYoga => 'Yoga & Flexibility';
+
+  @override
+  String get aiUsingProfile => 'Using profile:';
+
+  @override
+  String get aiEditProfile => 'Edit';
+
+  @override
+  String get warningWorkoutDeletion =>
+      'This will permanently delete this workout and all its historical execution logs. This cannot be undone!';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get generateAiPlan => 'Generate AI Plan (1 Credit)';
+
+  @override
+  String get skipAi => 'Skip AI & Go to Dashboard';
+
+  @override
+  String get themeTitle => 'App Theme';
+
+  @override
+  String get themeSystem => 'System Default';
+
+  @override
+  String get themeLight => 'Light Mode';
+
+  @override
+  String get themeDark => 'Dark Mode';
 }

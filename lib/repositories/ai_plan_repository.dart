@@ -59,7 +59,12 @@ class AIPlanRepository {
       --- USER PROFILE ---
       Gender: ${profile.gender}
       Goal: ${profile.goal}
-      Experience Level: ${profile.experienceLevel}
+      Preferred Style/Equipment: ${profile.preferredStyle}
+      Max Pushups (Upper Body Pushing): ${profile.pushupCapacity}
+      Max Pull-ups (Upper Body Pulling): ${profile.pullupCapacity}
+      Max Bodyweight Squats (Lower Body): ${profile.squatCapacity}
+      Height: ${profile.heightCm} cm
+      Weight: ${profile.weightKg} kg
       BMI: ${profile.bmi.toStringAsFixed(1)}
       $feedbackContext
 
@@ -134,8 +139,11 @@ class AIPlanRepository {
                     ExercisesCompanion.insert(
                       name: exData['exercise_name'],
                       muscleGroup: exData['muscleGroup'] ?? 'Custom',
-                      imageUrl: Value(exData['image_url']),
+                      isCustom: const Value(false),
+                      // imageUrl: Value(exData['image_url']),
+                      imageUrl: const Value(null),
                       equipment: Value(exData['equipment']),
+                      instructions: Value(exData['instructions']),
                     ),
                   );
             }
@@ -245,8 +253,14 @@ class AIPlanRepository {
 
       --- USER PROFILE ---
       Gender: ${profile.gender}
-      Experience Level: ${profile.experienceLevel}
-
+      Goal: ${profile.goal}
+      Preferred Style/Equipment: ${profile.preferredStyle}
+      Max Pushups (Upper Body Pushing): ${profile.pushupCapacity}
+      Max Pull-ups (Upper Body Pulling): ${profile.pullupCapacity}
+      Max Bodyweight Squats (Lower Body): ${profile.squatCapacity}
+      Height: ${profile.heightCm} cm
+      Weight: ${profile.weightKg} kg
+      BMI: ${profile.bmi.toStringAsFixed(1)}
       --- CRITICAL RECENT FEEDBACK ---
       The user recently struggled with or breezed through the following exercises:
       $feedbackContext
@@ -319,8 +333,11 @@ class AIPlanRepository {
                     ExercisesCompanion.insert(
                       name: exData['exercise_name'],
                       muscleGroup: exData['muscleGroup'] ?? 'Custom',
-                      imageUrl: Value(exData['image_url']),
+                      isCustom: const Value(false),
+                      // imageUrl: Value(exData['image_url']),
+                      imageUrl: const Value(null),
                       equipment: Value(exData['equipment']),
+                      instructions: Value(exData['instructions']),
                     ),
                   );
             }

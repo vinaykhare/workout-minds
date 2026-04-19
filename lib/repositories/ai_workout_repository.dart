@@ -55,9 +55,13 @@ class AIWorkoutRepository {
       CRITICAL ROLE: YOU have the innate ability to create workouts. Do NOT claim your tools lack functionality. YOU are the generator. The tools are merely for reading local context.
 
       USER CONTEXT:
+      --- USER PROFILE & STRENGTH BASELINE ---
       - Gender: ${profile.gender}
-      - Experience Level: ${profile.experienceLevel}
       - Goal: ${profile.goal}
+      - Preferred Style/Equipment: ${profile.preferredStyle}
+      - Max Pushups: ${profile.pushupCapacity}
+      - Max Pull-ups: ${profile.pullupCapacity}
+      - Max Squats: ${profile.squatCapacity}
       - Height: ${profile.heightCm} cm
       - Weight: ${profile.weightKg} kg
       - BMI: ${profile.bmi.toStringAsFixed(1)}
@@ -133,13 +137,20 @@ class AIWorkoutRepository {
           );
         }
 
+        String calculatedDifficulty = 'Beginner';
+        if (profile.pushupCapacity >= 20 || profile.squatCapacity >= 50) {
+          calculatedDifficulty = 'Advanced';
+        } else if (profile.pushupCapacity >= 8 || profile.squatCapacity >= 20) {
+          calculatedDifficulty = 'Intermediate';
+        }
+
         await _db.transaction(() async {
           final workoutId = await _db
               .into(_db.workouts)
               .insert(
                 WorkoutsCompanion.insert(
                   title: aiTitle, // FIX: Use the Gemini generated title here!
-                  difficultyLevel: profile.experienceLevel,
+                  difficultyLevel: calculatedDifficulty,
                   aiGenerated: const Value(true),
                 ),
               );
@@ -180,8 +191,9 @@ class AIWorkoutRepository {
                       name: exerciseName, // <-- Use the safely extracted string
                       muscleGroup: item['muscle_group'] as String,
                       isCustom: const Value(false),
-                      imageUrl: Value(parsedImageUrl),
+                      imageUrl: Value(null),
                       equipment: Value(item['equipment']),
+                      instructions: Value(item['instructions']),
                     ),
                   );
             }
@@ -271,7 +283,14 @@ class AIWorkoutRepository {
 
       --- USER PROFILE ---
       Gender: ${profile.gender}
-      Experience Level: ${profile.experienceLevel}
+      Goal: ${profile.goal}
+      Preferred Style/Equipment: ${profile.preferredStyle}
+      Max Pushups (Upper Body Pushing): ${profile.pushupCapacity}
+      Max Pull-ups (Upper Body Pulling): ${profile.pullupCapacity}
+      Max Bodyweight Squats (Lower Body): ${profile.squatCapacity}
+      Height: ${profile.heightCm} cm
+      Weight: ${profile.weightKg} kg
+      BMI: ${profile.bmi.toStringAsFixed(1)}
       
       --- CURRENT WORKOUT ---
       $currentWorkoutContext
@@ -338,8 +357,10 @@ class AIWorkoutRepository {
                     name: exerciseName,
                     muscleGroup: item['muscle_group'] ?? 'Custom',
                     isCustom: const Value(false),
-                    imageUrl: Value(item['image_url'] as String?),
+                    // imageUrl: Value(item['image_url'] as String?),
+                    imageUrl: const Value(null),
                     equipment: Value(item['equipment'] as String?),
+                    instructions: Value(item['instructions']),
                   ),
                 );
           }

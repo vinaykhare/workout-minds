@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/presentation/welcome_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
@@ -82,7 +83,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final profile = ref.watch(userProfileProvider);
     final notifier = ref.read(userProfileProvider.notifier);
-
+    final l10n = AppLocalizations.of(context)!;
     final bmiColor = _getBMIColor(profile.bmi);
     final displayLanguage = profile.appLocale == 'hi' ? 'Hinglish' : 'English';
 
@@ -167,6 +168,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               },
             ),
           ),
+          _SettingsTile(
+            icon: Icons.dark_mode,
+            title: l10n.themeTitle,
+            value: profile.themeMode == 'system'
+                ? l10n.themeSystem
+                : (profile.themeMode == 'light'
+                      ? l10n.themeLight
+                      : l10n.themeDark),
+            onTap: () => _showOptionsDialog(
+              context,
+              l10n.themeTitle,
+              profile.themeMode,
+              ['system', 'light', 'dark'],
+              (val) => notifier.updateField('themeMode', val),
+            ),
+          ),
           const SizedBox(height: 24),
 
           // --- 3. EDITABLE PROFILE METRICS ---
@@ -234,15 +251,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           _SettingsTile(
-            icon: Icons.fitness_center,
-            title: 'Experience Level',
-            value: profile.experienceLevel,
+            icon: Icons.handyman_outlined,
+            title: l10n.styleTitle,
+            value: profile.preferredStyle,
             onTap: () => _showOptionsDialog(
               context,
-              'Experience',
-              profile.experienceLevel,
-              ['Beginner', 'Intermediate', 'Advanced'],
-              (val) => notifier.updateField('experienceLevel', val),
+              l10n.styleTitle,
+              profile.preferredStyle,
+              [
+                'Full Gym',
+                'Home (Dumbbells/Bands)',
+                'Bodyweight Only',
+                'Yoga & Flexibility',
+              ],
+              (val) => notifier.updateField('preferredStyle', val),
+            ),
+          ),
+          // --- NEW: STRENGTH BASELINE ---
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0, bottom: 8.0, top: 16.0),
+            child: Text(
+              l10n.settingsStrengthBaseline, // <--- Localized
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.arrow_upward,
+            title: l10n.settingsMaxPushups, // <--- Localized
+            value: '${profile.pushupCapacity}',
+            onTap: () => _showSliderDialog(
+              context,
+              l10n.settingsMaxPushups, // <--- Localized
+              profile.pushupCapacity.toDouble(),
+              0,
+              100,
+              (val) => notifier.updateField('pushupCapacity', val.toInt()),
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.fitness_center,
+            title: l10n.settingsMaxPullups, // <--- Localized
+            value: '${profile.pullupCapacity}',
+            onTap: () => _showSliderDialog(
+              context,
+              l10n.settingsMaxPullups, // <--- Localized
+              profile.pullupCapacity.toDouble(),
+              0,
+              50,
+              (val) => notifier.updateField('pullupCapacity', val.toInt()),
+            ),
+          ),
+          _SettingsTile(
+            icon: Icons.airline_seat_legroom_extra,
+            title: l10n.settingsMaxSquats, // <--- Localized
+            value: '${profile.squatCapacity}',
+            onTap: () => _showSliderDialog(
+              context,
+              l10n.settingsMaxSquats, // <--- Localized
+              profile.squatCapacity.toDouble(),
+              0,
+              200,
+              (val) => notifier.updateField('squatCapacity', val.toInt()),
             ),
           ),
           const SizedBox(height: 24),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import '../data/local/database.dart';
@@ -43,6 +45,14 @@ class DashboardController extends _$DashboardController {
         // 2. FIX: Burn a credit upon successful generation!
         // (Remember, our Notifier ignores this if they are Pro)
         await ref.read(userProfileProvider.notifier).useAiCredit();
+
+        // --- FIX 1: FIRE BACKGROUND SYNC AFTER SINGLE WORKOUT ---
+        if (profile.isAutoSyncEnabled) {
+          final profileJsonString = jsonEncode(profile.toJson());
+          ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
+        }
+
+        // Refresh the list from Drift
 
         // Refresh the list from Drift
         return await ref

@@ -14,12 +14,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 class WorkoutBuilderScreen extends ConsumerStatefulWidget {
   final int? existingWorkoutId;
-  final String? existingTitle; // FIX 5: Add this variable
+  final String? existingTitle;
+  final void Function(String title, List<DraftExercise> exercises)? onSaveDraft;
 
   const WorkoutBuilderScreen({
     super.key,
     this.existingWorkoutId,
     this.existingTitle,
+    this.onSaveDraft,
   });
 
   @override
@@ -325,6 +327,12 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
     final title = _titleController.text.trim().isEmpty
         ? "My Custom Workout"
         : _titleController.text.trim();
+
+    if (widget.onSaveDraft != null) {
+      widget.onSaveDraft!(title, draftExercises);
+      Navigator.pop(context); // Go back to the preview screen
+      return; // Stop execution here! No database writes!
+    }
 
     try {
       await db.transaction(() async {

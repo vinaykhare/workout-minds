@@ -24,9 +24,9 @@ final driveSyncProvider = Provider<DriveSyncService>((ref) {
   return DriveSyncService(db);
 });
 
-// Updated Vertex AI Model Provider using AppConstants
-// --- YOUR UPDATED PROVIDERS ---
-
+// ============================================================================
+// 1. THE SINGLE WORKOUT ARCHITECT
+// ============================================================================
 final aiModelProvider = Provider<GenerativeModel>((ref) {
   final profile = ref.watch(userProfileProvider);
 
@@ -41,9 +41,6 @@ final aiModelProvider = Provider<GenerativeModel>((ref) {
       ? profile.customModelName
       : defaultModelName;
 
-  // THE SILVER BULLET: This forces the API to strictly output JSON
-  // It completely eliminates conversational text and format errors.
-  // THE SILVER BULLET: Dynamic Title + Strict Array
   final generationConfig = GenerationConfig(
     responseMimeType: 'application/json',
     responseSchema: Schema.object(
@@ -68,7 +65,10 @@ final aiModelProvider = Provider<GenerativeModel>((ref) {
               "target_reps": Schema.integer(),
               "rest_seconds_set": Schema.integer(),
               "rest_seconds_exercise": Schema.integer(),
-              "image_url": Schema.string(),
+              "instructions": Schema.string(
+                description:
+                    "Detailed, step-by-step form instructions and safety tips for this exercise.",
+              ),
             },
             requiredProperties: [
               "exercise_name",
@@ -77,6 +77,7 @@ final aiModelProvider = Provider<GenerativeModel>((ref) {
               "target_reps",
               "rest_seconds_set",
               "rest_seconds_exercise",
+              "instructions", // <--- Safely mapped!
             ],
           ),
         ),
@@ -88,21 +89,19 @@ final aiModelProvider = Provider<GenerativeModel>((ref) {
   return GenerativeModel(
     model: activeModelName,
     apiKey: activeApiKey,
-    // tools: workoutTools,
-    generationConfig: generationConfig, // Inject the strict schema here!
+    generationConfig: generationConfig,
   );
 });
 
 // ============================================================================
-// THE NEW "PLAN" ARCHITECT: Forces Gemini to output a structured weekly cycle
+// 2. THE MULTI-WEEK PLAN ARCHITECT
 // ============================================================================
 final aiPlanModelProvider = Provider<GenerativeModel>((ref) {
   final profile = ref.watch(userProfileProvider);
 
   final defaultDevKey = dotenv.env['GEMINI_API_KEY'] ?? 'MISSING_KEY';
-  // Note: For complex multi-layered JSON like this, it is highly recommended
-  // to use 'gemini-2.5-flash' instead of 'lite' if you find it struggling!
-  final defaultModelName = dotenv.env['MODEL_NAME'] ?? 'gemini-2.5-flash-lite';
+  // Note: For complex multi-layered JSON like this, 'gemini-2.5-flash' handles it best!
+  final defaultModelName = dotenv.env['MODEL_NAME'] ?? 'gemini-2.5-flash';
 
   final activeApiKey = (profile.isPro && profile.customApiKey.isNotEmpty)
       ? profile.customApiKey
@@ -132,6 +131,7 @@ final aiPlanModelProvider = Provider<GenerativeModel>((ref) {
               description: "Exact title to be referenced in the schedule.",
             ),
             "difficulty_level": Schema.string(),
+            // THE EXERCISES ARRAY (Properly Nested!)
             "exercises": Schema.array(
               items: Schema.object(
                 properties: {
@@ -149,7 +149,10 @@ final aiPlanModelProvider = Provider<GenerativeModel>((ref) {
                   "target_duration_seconds": Schema.integer(),
                   "rest_seconds_set": Schema.integer(),
                   "rest_seconds_exercise": Schema.integer(),
-                  "image_url": Schema.string(),
+                  "instructions": Schema.string(
+                    description:
+                        "Detailed, step-by-step form instructions and safety tips for this exercise.",
+                  ),
                 },
                 requiredProperties: [
                   "exercise_name",
@@ -157,6 +160,7 @@ final aiPlanModelProvider = Provider<GenerativeModel>((ref) {
                   "target_sets",
                   "rest_seconds_set",
                   "rest_seconds_exercise",
+                  "instructions", // <--- Safely mapped!
                 ],
               ),
             ),
@@ -165,7 +169,7 @@ final aiPlanModelProvider = Provider<GenerativeModel>((ref) {
             "workout_title",
             "difficulty_level",
             "exercises",
-          ],
+          ], // <--- This was the part that was throwing the error!
         ),
       ),
 
@@ -299,6 +303,10 @@ final workoutShareProvider = Provider<WorkoutShareService>((ref) {
 
 // --- NEW: A global provider to hold files that arrive while the app is waking up! ---
 final pendingImportProvider = StateProvider<Map<String, dynamic>?>(
+  (ref) => null,
+);
+
+final pendingPlanImportProvider = StateProvider<Map<String, dynamic>?>(
   (ref) => null,
 );
 

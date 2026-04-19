@@ -94,4 +94,131 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get genderFemale => 'Mahila (Female)';
+
+  @override
+  String get welcomeSubtitle =>
+      'Aapka AI fitness journey,\nGoogle Drive ke saath securely synced.';
+
+  @override
+  String get restoreGoogle => 'Google Drive se Restore karein';
+
+  @override
+  String get startFresh => 'Nayi Shuruvaat';
+
+  @override
+  String get chooseLanguageTitle => 'Bhasha Chunein';
+
+  @override
+  String get chooseLanguageSub =>
+      'Aap app ko kis bhasha mein use karna chahenge?';
+
+  @override
+  String get goalTitle => 'Aapka primary goal kya hai?';
+
+  @override
+  String get goalSub => 'AI aapke workouts isi goal par focus karegi.';
+
+  @override
+  String get goalWeight => 'Wazan Kam Karna (Lose Weight)';
+
+  @override
+  String get goalMuscle => 'Muscle Banana (Build Muscle)';
+
+  @override
+  String get goalFit => 'Fit Rehna (Stay Fit)';
+
+  @override
+  String get assessTitle => 'Aapki strength test karein';
+
+  @override
+  String get assessSub =>
+      'Sahi batana! Isse AI aapka starting level decide karegi.';
+
+  @override
+  String get assessPushups => 'Ek baar mein max Pushups:';
+
+  @override
+  String get assessPullups => 'Ek baar mein max Pull-ups:';
+
+  @override
+  String get assessSquats => 'Ek baar mein max Squats:';
+
+  @override
+  String get metricsTitle => 'Aapke metrics kya hain?';
+
+  @override
+  String get metricsSub => 'Aapka BMI calculate karne ke liye.';
+
+  @override
+  String get heightLabel => 'Height (Kadd) - cm';
+
+  @override
+  String get weightLabel => 'Weight (Wazan) - kg';
+
+  @override
+  String get finishSetup => 'Setup Poora Karein';
+
+  @override
+  String get genderOther => 'Anya / Batana nahi chahte';
+
+  @override
+  String get generatingPlan => 'Aapka custom plan ban raha hai...';
+
+  @override
+  String get settingsStrengthBaseline => 'Strength Baseline (Taakat)';
+
+  @override
+  String get settingsMaxPushups => 'Max Pushups';
+
+  @override
+  String get settingsMaxPullups => 'Max Pull-ups';
+
+  @override
+  String get settingsMaxSquats => 'Max Squats';
+
+  @override
+  String get styleTitle => 'Training Style';
+
+  @override
+  String get styleGym => 'Full Gym (Saari Machines)';
+
+  @override
+  String get styleDumbbell => 'Home (Sirf Dumbbells/Bands)';
+
+  @override
+  String get styleBodyweight => 'Bodyweight (Bina Equipment)';
+
+  @override
+  String get styleYoga => 'Yoga aur Stretching';
+
+  @override
+  String get aiUsingProfile => 'Aapki profile ke mutaabiq:';
+
+  @override
+  String get aiEditProfile => 'Badlein';
+
+  @override
+  String get warningWorkoutDeletion =>
+      'Yah workout aur iske sabhi purane Execution Logs humesha k liye delete ho jayenge. Ise wapas nahi kiya ja sakta!';
+
+  @override
+  String get skip => 'Chhodein (Skip)';
+
+  @override
+  String get generateAiPlan => 'AI Plan Banao (1 Credit)';
+
+  @override
+  String get skipAi => 'Skip karein aur Dashboard par jayein';
+
+  @override
+  String get themeTitle => 'App Theme (Rang)';
+
+  @override
+  String get themeSystem => 'System Default';
+
+  @override
+  String get themeLight => 'Light Mode';
+
+  @override
+  String get themeDark => 'Dark Mode';
 }

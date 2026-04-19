@@ -258,9 +258,15 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  // Deletes a plan. (Cascade delete automatically wipes WorkoutPlanDays!)
-  Future<void> deletePlan(int planId) {
-    return (delete(workoutPlans)..where((t) => t.id.equals(planId))).go();
+  // Deletes a plan and manually wipes child tables to prevent ghost records!
+  Future<void> deletePlan(int planId) async {
+    await transaction(() async {
+      await (delete(
+        workoutPlanDays,
+      )..where((t) => t.planId.equals(planId))).go();
+      await (delete(planLogs)..where((t) => t.planId.equals(planId))).go();
+      await (delete(workoutPlans)..where((t) => t.id.equals(planId))).go();
+    });
   }
 
   Future<void> logWorkoutCompletion(

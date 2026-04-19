@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../repositories/preferences_provider.dart';
-import '../repositories/providers.dart';
+import 'package:workout_minds/core/l10n/app_localizations.dart';
+import 'package:workout_minds/repositories/preferences_provider.dart';
+import 'package:workout_minds/repositories/providers.dart';
+import 'dashboard_screen.dart'; // <--- Added missing import
 import 'onboarding_screen.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -37,6 +39,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           backgroundColor: Colors.orange,
         ),
       );
+
+      // --- FIX 2: They connected to Drive, so default Auto-Sync to ON! ---
+      await ref
+          .read(userProfileProvider.notifier)
+          .updateField('isAutoSyncEnabled', true);
+
       _startFresh();
       return;
     }
@@ -47,13 +55,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     if (!mounted) return;
 
     if (restoredJson != null) {
-      // 1. Rebuild and save the profile (Force Auto-Sync ON since they linked Drive!)
       final restoredProfile = UserProfile.fromJson(
         jsonDecode(restoredJson),
       ).copyWith(isAutoSyncEnabled: true);
       await ref.read(userProfileProvider.notifier).saveProfile(restoredProfile);
 
-      // 2. Refresh the UI database connections
       ref.invalidate(databaseProvider);
       ref.invalidate(weeklyStatsProvider);
       ref.invalidate(recentWorkoutsProvider);
@@ -61,7 +67,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
       setState(() => _isLoading = false);
 
-      // 3. Ask for their current weight!
       _showWeightConfirmation(restoredProfile.weightKg);
     } else {
       setState(() => _isLoading = false);
@@ -74,63 +79,76 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     }
   }
 
-  // --- SMART UX: Confirm Weight Post-Restore ---
+  // --- FIX 3: Dynamic Button Text & Correct Dashboard Routing ---
   void _showWeightConfirmation(double lastKnownWeight) {
     double currentWeight = lastKnownWeight;
+    final isHi = ref.read(userProfileProvider).appLocale == 'hi';
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => Consumer(
-          // <-- NEW: Grab a living 'ref' for the dialog!
-          builder: (context, ref, child) => AlertDialog(
-            title: const Text('Welcome Back! 🎉'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'We successfully restored your workout history. Weight can change over time; are you still:',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${currentWeight.toInt()} kg',
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
+          builder: (context, ref, child) {
+            // Check if the user moved the slider!
+            final weightChanged = currentWeight != lastKnownWeight;
+            final btnText = weightChanged
+                ? (isHi ? 'Weight Update Karein' : 'Update Weight Now')
+                : (isHi ? 'Sahi Hai!' : 'Looks Good!');
+
+            return AlertDialog(
+              title: Text(isHi ? 'Wapas Swagat Hai! 🎉' : 'Welcome Back! 🎉'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isHi
+                        ? 'Aapki history mil gayi. Kya aapka wazan abhi bhi yahi hai?'
+                        : 'We successfully restored your workout history. Is your weight still accurate?',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${currentWeight.toInt()} kg',
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                  Slider(
+                    value: currentWeight,
+                    min: 40,
+                    max: 150,
+                    onChanged: (val) => setState(() => currentWeight = val),
+                  ),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () async {
+                      await ref
+                          .read(userProfileProvider.notifier)
+                          .updateField('weightKg', currentWeight);
+
+                      if (dialogContext.mounted) {
+                        // THIS WAS THE MISSING PIECE! Route to Dashboard and kill history.
+                        Navigator.of(dialogContext).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => const DashboardScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    child: Text(btnText),
                   ),
                 ),
-                Slider(
-                  value: currentWeight,
-                  min: 40,
-                  max: 150,
-                  onChanged: (val) => setState(() => currentWeight = val),
-                ),
               ],
-            ),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    // Use the fresh ref to update the weight
-                    await ref
-                        .read(userProfileProvider.notifier)
-                        .updateField('weightKg', currentWeight);
-
-                    if (dialogContext.mounted) {
-                      // Do NOT push a new route! The Dashboard is already behind this dialog.
-                      // Just pop the dialog and you are home!
-                      Navigator.pop(dialogContext);
-                    }
-                  },
-                  child: const Text('Looks Good!'),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -144,89 +162,130 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If it's Windows or Web, immediately push to Onboarding (skip the welcome screen)
     if (kIsWeb || Platform.isWindows) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _startFresh());
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final l10n = AppLocalizations.of(context)!;
+
+    final heroSection = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.fitness_center, size: 100, color: Colors.blueAccent),
+        const SizedBox(height: 24),
+        Text(
+          l10n.appTitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          l10n.welcomeSubtitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+        ),
+      ],
+    );
+
+    final actionSection = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_isLoading) ...[
+          const Center(child: CircularProgressIndicator()),
+          const SizedBox(height: 16),
+          Text(
+            _statusText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.blueAccent,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ] else ...[
+          FilledButton.icon(
+            onPressed: _handleRestore,
+            icon: const Icon(Icons.cloud_download),
+            label: Text(l10n.restoreGoogle),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              padding: const EdgeInsets.all(20),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: _startFresh,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.grey),
+              padding: const EdgeInsets.all(20),
+            ),
+            child: Text(
+              l10n.startFresh,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ],
+      ],
+    );
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape = constraints.maxWidth > 600;
 
-              // App Logo / Hero
-              const Icon(
-                Icons.fitness_center,
-                size: 100,
-                color: Colors.blueAccent,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Workout Minds',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Your AI-powered fitness journey, synced securely with Google Drive.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-
-              const Spacer(),
-
-              if (_isLoading) ...[
-                const Center(child: CircularProgressIndicator()),
-                const SizedBox(height: 16),
-                Text(
-                  _statusText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.blueAccent),
-                ),
-              ] else ...[
-                // Google Sign In Button
-                FilledButton.icon(
-                  onPressed: _handleRestore,
-                  icon: const Icon(Icons.cloud_download),
-                  label: const Text('Restore from Google Drive'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    padding: const EdgeInsets.all(16),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Skip Button
-                OutlinedButton(
-                  onPressed: _startFresh,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.grey),
-                    padding: const EdgeInsets.all(16),
-                  ),
-                  child: const Text(
-                    'Start Fresh',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: isLandscape
+                      ? Padding(
+                          padding: const EdgeInsets.all(48.0),
+                          child: Row(
+                            children: [
+                              Expanded(child: heroSection),
+                              const SizedBox(width: 48),
+                              Expanded(
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 400,
+                                    ),
+                                    child: actionSection,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Spacer(),
+                              heroSection,
+                              const Spacer(),
+                              actionSection,
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
                 ),
               ],
-              const SizedBox(height: 32),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

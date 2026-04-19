@@ -202,6 +202,37 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
         title: const Text('Workout Plan'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Share Plan',
+            onPressed: () async {
+              final success = await ref
+                  .read(workoutShareProvider)
+                  .exportAndSharePlan(widget.planId);
+              if (!context.mounted) return;
+
+              if (!success && mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Export Failed')));
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.download_rounded),
+            tooltip: 'Save to Device',
+            onPressed: () async {
+              final success = await ref
+                  .read(workoutShareProvider)
+                  .savePlanToDisk(widget.planId);
+              if (!context.mounted) return;
+              if (success && mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Plan saved!')));
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
               final plan = await ref

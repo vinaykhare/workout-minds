@@ -12,9 +12,13 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 class UserProfile {
   final bool hasOnboarded;
   final String appLocale; // NEW: 'en' or 'hi'
+  final String themeMode;
   final String gender;
   final String goal;
-  final String experienceLevel;
+  final String preferredStyle;
+  final int pushupCapacity;
+  final int pullupCapacity; // Optional, but great for back strength
+  final int squatCapacity;
   final double heightCm;
   final double weightKg;
   final int aiCredits;
@@ -26,9 +30,13 @@ class UserProfile {
   UserProfile({
     required this.hasOnboarded,
     required this.appLocale,
+    required this.themeMode,
     required this.gender,
     required this.goal,
-    required this.experienceLevel,
+    required this.preferredStyle,
+    required this.pushupCapacity,
+    required this.pullupCapacity,
+    required this.squatCapacity,
     required this.heightCm,
     required this.weightKg,
     required this.aiCredits,
@@ -48,9 +56,13 @@ class UserProfile {
   UserProfile copyWith({
     bool? hasOnboarded,
     String? appLocale,
+    String? themeMode,
     String? gender,
     String? goal,
-    String? experienceLevel,
+    String? preferredStyle,
+    int? pushupCapacity,
+    int? pullupCapacity,
+    int? squatCapacity,
     double? heightCm,
     double? weightKg,
     int? aiCredits,
@@ -62,9 +74,13 @@ class UserProfile {
     return UserProfile(
       hasOnboarded: hasOnboarded ?? this.hasOnboarded,
       appLocale: appLocale ?? this.appLocale,
+      themeMode: themeMode ?? this.themeMode,
       gender: gender ?? this.gender,
       goal: goal ?? this.goal,
-      experienceLevel: experienceLevel ?? this.experienceLevel,
+      preferredStyle: preferredStyle ?? this.preferredStyle,
+      pushupCapacity: pushupCapacity ?? this.pushupCapacity,
+      pullupCapacity: pullupCapacity ?? this.pullupCapacity,
+      squatCapacity: squatCapacity ?? this.squatCapacity,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
       aiCredits: aiCredits ?? this.aiCredits,
@@ -79,9 +95,13 @@ class UserProfile {
   Map<String, dynamic> toJson() {
     return {
       'appLocale': appLocale,
+      'themeMode': themeMode,
       'gender': gender,
       'goal': goal,
-      'experienceLevel': experienceLevel,
+      'preferredStyle': preferredStyle,
+      'pushupCapacity': pushupCapacity,
+      'pullupCapacity': pullupCapacity,
+      'squatCapacity': squatCapacity,
       'heightCm': heightCm,
       'weightKg': weightKg,
       'aiCredits': aiCredits,
@@ -97,9 +117,13 @@ class UserProfile {
     return UserProfile(
       hasOnboarded: true, // If restoring, they bypass onboarding!
       appLocale: json['appLocale'] as String? ?? 'en',
+      themeMode: json['themeMode'] as String? ?? 'system',
       gender: json['gender'] as String? ?? '',
       goal: json['goal'] as String? ?? '',
-      experienceLevel: json['experienceLevel'] as String? ?? '',
+      preferredStyle: json['preferredStyle'] as String? ?? 'Full Gym',
+      pushupCapacity: json['pushupCapacity'] as int? ?? 0,
+      pullupCapacity: json['pullupCapacity'] as int? ?? 0,
+      squatCapacity: json['squatCapacity'] as int? ?? 0,
       heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0.0,
       weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0.0,
       aiCredits: json['aiCredits'] as int? ?? 3,
@@ -122,9 +146,13 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
     return UserProfile(
       hasOnboarded: prefs.getBool('hasOnboarded') ?? false,
       appLocale: prefs.getString('appLocale') ?? 'en', // Default to English
+      themeMode: prefs.getString('themeMode') ?? 'system',
       gender: prefs.getString('gender') ?? '',
       goal: prefs.getString('goal') ?? '',
-      experienceLevel: prefs.getString('experienceLevel') ?? '',
+      preferredStyle: prefs.getString('preferredStyle') ?? 'Full Gym',
+      pushupCapacity: prefs.getInt('pushupCapacity') ?? 0,
+      pullupCapacity: prefs.getInt('pullupCapacity') ?? 0,
+      squatCapacity: prefs.getInt('squatCapacity') ?? 0,
       heightCm: prefs.getDouble('heightCm') ?? 0.0,
       weightKg: prefs.getDouble('weightKg') ?? 0.0,
       aiCredits: prefs.getInt('aiCredits') ?? 3,
@@ -139,9 +167,13 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
   Future<void> saveProfile(UserProfile newProfile) async {
     await prefs.setBool('hasOnboarded', true);
     await prefs.setString('appLocale', newProfile.appLocale);
+    await prefs.setString('themeMode', newProfile.themeMode);
     await prefs.setString('gender', newProfile.gender);
     await prefs.setString('goal', newProfile.goal);
-    await prefs.setString('experienceLevel', newProfile.experienceLevel);
+    await prefs.setString('preferredStyle', newProfile.preferredStyle);
+    await prefs.setInt('pushupCapacity', newProfile.pushupCapacity);
+    await prefs.setInt('pullupCapacity', newProfile.pullupCapacity);
+    await prefs.setInt('squatCapacity', newProfile.squatCapacity);
     await prefs.setDouble('heightCm', newProfile.heightCm);
     await prefs.setDouble('weightKg', newProfile.weightKg);
     await prefs.setInt('aiCredits', newProfile.aiCredits);

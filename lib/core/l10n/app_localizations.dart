@@ -247,6 +247,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Female'**
   String get genderFemale;
+
+  /// No description provided for @welcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your AI-powered fitness journey,\nsynced securely with Google Drive.'**
+  String get welcomeSubtitle;
+
+  /// No description provided for @restoreGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Google Drive'**
+  String get restoreGoogle;
+
+  /// No description provided for @startFresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Fresh'**
+  String get startFresh;
+
+  /// No description provided for @chooseLanguageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Language'**
+  String get chooseLanguageTitle;
+
+  /// No description provided for @chooseLanguageSub.
+  ///
+  /// In en, this message translates to:
+  /// **'How would you like the app to talk to you?'**
+  String get chooseLanguageSub;
+
+  /// No description provided for @goalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What is your primary goal?'**
+  String get goalTitle;
+
+  /// No description provided for @goalSub.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll tailor your AI-generated workouts to focus on this.'**
+  String get goalSub;
+
+  /// No description provided for @goalWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose Weight'**
+  String get goalWeight;
+
+  /// No description provided for @goalMuscle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Muscle'**
+  String get goalMuscle;
+
+  /// No description provided for @goalFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay Fit & Active'**
+  String get goalFit;
+
+  /// No description provided for @assessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s assess your strength'**
+  String get assessTitle;
+
+  /// No description provided for @assessSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Be honest! This helps the AI set your starting difficulty.'**
+  String get assessSub;
+
+  /// No description provided for @assessPushups.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Pushups in one go:'**
+  String get assessPushups;
+
+  /// No description provided for @assessPullups.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Pull-ups in one go:'**
+  String get assessPullups;
+
+  /// No description provided for @assessSquats.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Bodyweight Squats in one go:'**
+  String get assessSquats;
+
+  /// No description provided for @metricsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s get your metrics'**
+  String get metricsTitle;
+
+  /// No description provided for @metricsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Used to calculate your BMI and daily caloric burn.'**
+  String get metricsSub;
+
+  /// No description provided for @heightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get heightLabel;
+
+  /// No description provided for @weightLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get weightLabel;
+
+  /// No description provided for @finishSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish Setup'**
+  String get finishSetup;
+
+  /// No description provided for @genderOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other / Prefer not to say'**
+  String get genderOther;
+
+  /// No description provided for @generatingPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating your first custom plan...'**
+  String get generatingPlan;
+
+  /// No description provided for @settingsStrengthBaseline.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength Baseline'**
+  String get settingsStrengthBaseline;
+
+  /// No description provided for @settingsMaxPushups.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Pushups'**
+  String get settingsMaxPushups;
+
+  /// No description provided for @settingsMaxPullups.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Pull-ups'**
+  String get settingsMaxPullups;
+
+  /// No description provided for @settingsMaxSquats.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Squats'**
+  String get settingsMaxSquats;
+
+  /// No description provided for @styleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Training Style'**
+  String get styleTitle;
+
+  /// No description provided for @styleGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Gym (All Equipment)'**
+  String get styleGym;
+
+  /// No description provided for @styleDumbbell.
+  ///
+  /// In en, this message translates to:
+  /// **'Home (Dumbbells & Bands)'**
+  String get styleDumbbell;
+
+  /// No description provided for @styleBodyweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Bodyweight Only (No Equipment)'**
+  String get styleBodyweight;
+
+  /// No description provided for @styleYoga.
+  ///
+  /// In en, this message translates to:
+  /// **'Yoga & Flexibility'**
+  String get styleYoga;
+
+  /// No description provided for @aiUsingProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Using profile:'**
+  String get aiUsingProfile;
+
+  /// No description provided for @aiEditProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get aiEditProfile;
+
+  /// No description provided for @warningWorkoutDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete this workout and all its historical execution logs. This cannot be undone!'**
+  String get warningWorkoutDeletion;
+
+  /// No description provided for @skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get skip;
+
+  /// No description provided for @generateAiPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate AI Plan (1 Credit)'**
+  String get generateAiPlan;
+
+  /// No description provided for @skipAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip AI & Go to Dashboard'**
+  String get skipAi;
+
+  /// No description provided for @themeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App Theme'**
+  String get themeTitle;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System Default'**
+  String get themeSystem;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light Mode'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark Mode'**
+  String get themeDark;
 }
 
 class _AppLocalizationsDelegate
