@@ -221,4 +221,40 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get themeDark => 'Dark Mode';
+
+  @override
+  String get builderNameLabel => 'Workout ka Naam';
+
+  @override
+  String get builderEmptyMsg => '+ dabayein aur pehli exercise jodein';
+
+  @override
+  String get builderAddBtn => 'Exercise Jodein';
+
+  @override
+  String get exSets => 'Sets:';
+
+  @override
+  String get exReps => 'Reps:';
+
+  @override
+  String get exDuration => 'Samay (Duration):';
+
+  @override
+  String get exRestSets => 'Sets ke beech aaram:';
+
+  @override
+  String get exRestNext => 'Agli exercise se pehle aaram:';
+
+  @override
+  String get exTimeBased => 'Time-based Exercise';
+
+  @override
+  String get exEquipment => 'Equipment (Zaroori nahi)';
+
+  @override
+  String get exTargetWeight => 'Target Wazan';
+
+  @override
+  String get exInstructions => 'Instructions aur Tips';
 }

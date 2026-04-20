@@ -64,5 +64,17 @@
   "themeTitle": "App Theme (Rang)",
   "themeSystem": "System Default",
   "themeLight": "Light Mode",
-  "themeDark": "Dark Mode"
+  "themeDark": "Dark Mode",
+  "builderNameLabel": "Workout ka Naam",
+  "builderEmptyMsg": "+ dabayein aur pehli exercise jodein",
+  "builderAddBtn": "Exercise Jodein",
+  "exSets": "Sets:",
+  "exReps": "Reps:",
+  "exDuration": "Samay (Duration):",
+  "exRestSets": "Sets ke beech aaram:",
+  "exRestNext": "Agli exercise se pehle aaram:",
+  "exTimeBased": "Time-based Exercise",
+  "exEquipment": "Equipment (Zaroori nahi)",
+  "exTargetWeight": "Target Wazan",
+  "exInstructions": "Instructions aur Tips"
 }

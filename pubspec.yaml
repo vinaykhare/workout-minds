@@ -21,16 +21,13 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
   # AI & Agentic Logic
-  langchain: ^0.8.0 # For the Agentic Loop and Tool Calling
   google_generative_ai: ^0.4.0 # Vertex AI for Firebase integration
   # Interactive Workout Engine (Audio & Background)
   audio_service: ^0.18.17 # Background isolate persistence
   flutter_tts: ^4.2.2 # Voice guidance
-  just_audio: ^0.10.5 # Optional: for metronome or sound effects
   # Data Viz & Sharing
   fl_chart: ^1.2.0 # Statistics dashboard
   share_plus: ^12.0.2 # JSON workout export
-  json_annotation: ^4.9.0
   image_picker: ^1.2.1
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.4

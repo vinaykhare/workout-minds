@@ -493,6 +493,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark Mode'**
   String get themeDark;
+
+  /// No description provided for @builderNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout Name'**
+  String get builderNameLabel;
+
+  /// No description provided for @builderEmptyMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to add your first exercise'**
+  String get builderEmptyMsg;
+
+  /// No description provided for @builderAddBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Exercise'**
+  String get builderAddBtn;
+
+  /// No description provided for @exSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets:'**
+  String get exSets;
+
+  /// No description provided for @exReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps:'**
+  String get exReps;
+
+  /// No description provided for @exDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration:'**
+  String get exDuration;
+
+  /// No description provided for @exRestSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest Between Sets:'**
+  String get exRestSets;
+
+  /// No description provided for @exRestNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest Before Next:'**
+  String get exRestNext;
+
+  /// No description provided for @exTimeBased.
+  ///
+  /// In en, this message translates to:
+  /// **'Time-based Exercise'**
+  String get exTimeBased;
+
+  /// No description provided for @exEquipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment (Opt.)'**
+  String get exEquipment;
+
+  /// No description provided for @exTargetWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Weight'**
+  String get exTargetWeight;
+
+  /// No description provided for @exInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise Instructions & Tips'**
+  String get exInstructions;
 }
 
 class _AppLocalizationsDelegate

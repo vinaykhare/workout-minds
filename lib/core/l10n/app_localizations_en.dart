@@ -221,4 +221,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeDark => 'Dark Mode';
+
+  @override
+  String get builderNameLabel => 'Workout Name';
+
+  @override
+  String get builderEmptyMsg => 'Tap + to add your first exercise';
+
+  @override
+  String get builderAddBtn => 'Add Exercise';
+
+  @override
+  String get exSets => 'Sets:';
+
+  @override
+  String get exReps => 'Reps:';
+
+  @override
+  String get exDuration => 'Duration:';
+
+  @override
+  String get exRestSets => 'Rest Between Sets:';
+
+  @override
+  String get exRestNext => 'Rest Before Next:';
+
+  @override
+  String get exTimeBased => 'Time-based Exercise';
+
+  @override
+  String get exEquipment => 'Equipment (Opt.)';
+
+  @override
+  String get exTargetWeight => 'Target Weight';
+
+  @override
+  String get exInstructions => 'Exercise Instructions & Tips';
 }

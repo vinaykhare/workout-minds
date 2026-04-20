@@ -64,5 +64,17 @@
   "themeTitle": "App Theme",
   "themeSystem": "System Default",
   "themeLight": "Light Mode",
-  "themeDark": "Dark Mode"
+  "themeDark": "Dark Mode",
+  "builderNameLabel": "Workout Name",
+  "builderEmptyMsg": "Tap + to add your first exercise",
+  "builderAddBtn": "Add Exercise",
+  "exSets": "Sets:",
+  "exReps": "Reps:",
+  "exDuration": "Duration:",
+  "exRestSets": "Rest Between Sets:",
+  "exRestNext": "Rest Before Next:",
+  "exTimeBased": "Time-based Exercise",
+  "exEquipment": "Equipment (Opt.)",
+  "exTargetWeight": "Target Weight",
+  "exInstructions": "Exercise Instructions & Tips"
 }
