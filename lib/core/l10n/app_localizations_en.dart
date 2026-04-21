@@ -331,4 +331,199 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get detailActionDelete => 'Delete';
+
+  @override
+  String get planProgress => 'Plan Progress';
+
+  @override
+  String get planConquered => 'Plan Conquered!';
+
+  @override
+  String planCompletedOn(String date) {
+    return 'Completed on $date';
+  }
+
+  @override
+  String get planClaimVictory => 'Claim Victory & Reset Plan';
+
+  @override
+  String get planStart => 'Start Plan';
+
+  @override
+  String get planResume => 'Resume Plan';
+
+  @override
+  String get planResetTitle => 'Reset Progress?';
+
+  @override
+  String get planResetContent =>
+      'This will uncheck all days and stop tracking the calendar dates.';
+
+  @override
+  String get planResetBtn => 'Reset';
+
+  @override
+  String get planOptimizeBtn => 'Optimize Schedule based on Feedback';
+
+  @override
+  String get planSchedule => 'Schedule';
+
+  @override
+  String get planRestDay => 'Rest Day';
+
+  @override
+  String get planRest => 'Rest';
+
+  @override
+  String planDayLabel(int num) {
+    return 'Day\n$num';
+  }
+
+  @override
+  String get planActionShare => 'Share Plan';
+
+  @override
+  String get planActionDownload => 'Save to Device';
+
+  @override
+  String get planActionEdit => 'Edit Plan';
+
+  @override
+  String get planActionDelete => 'Delete Plan';
+
+  @override
+  String get planDeleteTitle => 'Delete Plan?';
+
+  @override
+  String get planDeleteContent =>
+      'Are you sure you want to delete this workout plan? Your individual workouts will NOT be deleted.';
+
+  @override
+  String get builderPlanTitle => 'Plan Builder';
+
+  @override
+  String get builderPlanName => 'Plan Name';
+
+  @override
+  String get builderPlanNameHint => 'E.g., 4-Week Shred';
+
+  @override
+  String get builderPlanDuration => 'Duration';
+
+  @override
+  String builderPlanWeeks(int w) {
+    return '$w Weeks';
+  }
+
+  @override
+  String get builderPlanTapDay => 'Tap a day to assign a workout:';
+
+  @override
+  String builderAssignDay(int num) {
+    return 'Assign Day $num';
+  }
+
+  @override
+  String get searchWorkoutsHint => 'Search workouts...';
+
+  @override
+  String countdownDay(int num) {
+    return 'Day $num';
+  }
+
+  @override
+  String get countdownProjectionTitle => 'Plan Projection';
+
+  @override
+  String countdownProjectionText(String date) {
+    return 'Keep up this pace and you will conquer this plan on:\n$date';
+  }
+
+  @override
+  String get countdownSeconds => 'Seconds to start...';
+
+  @override
+  String get countdownSkip => 'Skip Timer & Start Now';
+
+  @override
+  String get countdownCancel => 'Cancel & Go Back';
+
+  @override
+  String get countdownEmptyError =>
+      'This workout has no exercises! Edit it first.';
+
+  @override
+  String get importReviewTitle => 'Review Import';
+
+  @override
+  String get importDefaultTitle => 'Imported Plan';
+
+  @override
+  String importWeeksGoal(int weeks, String goal) {
+    return '$weeks Weeks  •  $goal';
+  }
+
+  @override
+  String get importEditBtn => 'Edit Plan Details';
+
+  @override
+  String get importInstructions =>
+      'Tap any workout below to preview or edit it before saving this plan to your device.';
+
+  @override
+  String get importIncluded => 'Included Workouts';
+
+  @override
+  String importExercisesCount(int count) {
+    return '$count Exercises';
+  }
+
+  @override
+  String get importSaving => 'Saving...';
+
+  @override
+  String get importSaveBtn => 'Save Plan & Workouts';
+
+  @override
+  String importFailed(String error) {
+    return 'Failed to import: $error';
+  }
+
+  @override
+  String get importEditDialogTitle => 'Edit Plan Details';
+
+  @override
+  String get importEditNameLabel => 'Plan Title';
+
+  @override
+  String get importEditDescLabel => 'Description';
+
+  @override
+  String get importEditGoalLabel => 'Goal (e.g. Build Muscle)';
+
+  @override
+  String get importEditSaveBtn => 'Save Details';
+
+  @override
+  String get summaryPlanHistory => 'Plan History';
+
+  @override
+  String get summaryWorkoutsCompleted => 'Workouts Completed';
+
+  @override
+  String get summaryNoLogs => 'No workout logs found for this run.';
+
+  @override
+  String summaryWorkoutSession(int vol) {
+    return 'Workout Session (Volume: $vol)';
+  }
+
+  @override
+  String get logDetailSummary => 'Workout Summary';
+
+  @override
+  String get logDetailExercises => 'Exercises Completed';
+
+  @override
+  String get logDetailNoExercises => 'No exercises found for this log.';
 }

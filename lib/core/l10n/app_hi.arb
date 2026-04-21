@@ -135,5 +135,96 @@
   "detailActionEdit": "Badlein (Edit)",
   "detailActionShare": "Share",
   "detailActionDownload": "Download",
-  "detailActionDelete": "Hatao (Delete)"
+  "detailActionDelete": "Hatao (Delete)",
+  "planProgress": "Plan ka Progress",
+  "planConquered": "Plan Poora Hua!",
+  "planCompletedOn": "{date} ko poora hua",
+  "@planCompletedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "planClaimVictory": "Jeet ka Jashn Manayein aur Reset Karein",
+  "planStart": "Plan Shuru Karein",
+  "planResume": "Plan Wapas Shuru Karein",
+  "planResetTitle": "Progress Reset Karein?",
+  "planResetContent": "Isse sabhi din uncheck ho jayenge aur calendar tracking ruk jayegi.",
+  "planResetBtn": "Reset Karein",
+  "planOptimizeBtn": "Feedback ke hisaab se Schedule behtar banayein",
+  "planSchedule": "Schedule",
+  "planRestDay": "Aaram ka Din",
+  "planRest": "Aaram",
+  "planDayLabel": "Din\n{num}",
+  "@planDayLabel": {
+    "placeholders": {
+      "num": {
+        "type": "int"
+      }
+    }
+  },
+  "planActionShare": "Plan Share Karein",
+  "planActionDownload": "Device mein Save karein",
+  "planActionEdit": "Plan Badlein",
+  "planActionDelete": "Plan Hatao",
+  "planDeleteTitle": "Plan Delete Karein?",
+  "planDeleteContent": "Kya aap waqai is plan ko delete karna chahte hain? Aapke individual workouts delete NAHI honge.",
+  "builderPlanTitle": "Plan Banayein",
+  "builderPlanName": "Plan ka Naam",
+  "builderPlanNameHint": "Jaise: 4-Week Shred",
+  "builderPlanDuration": "Samay (Duration)",
+  "builderPlanWeeks": "{w} Hafte (Weeks)",
+  "@builderPlanWeeks": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      }
+    }
+  },
+  "builderPlanTapDay": "Workout assign karne ke liye kisi bhi din par tap karein:",
+  "builderAssignDay": "Din {num} Assign Karein",
+  "@builderAssignDay": {
+    "placeholders": {
+      "num": {
+        "type": "int"
+      }
+    }
+  },
+  "searchWorkoutsHint": "Workouts dhoondein...",
+  "countdownDay": "Din {num}",
+  "@countdownDay": { "placeholders": { "num": { "type": "int" } } },
+  "countdownProjectionTitle": "Plan ka Anuman",
+  "countdownProjectionText": "Agar aap aise hi chalte rahe, toh aapka plan is din poora hoga:\n{date}",
+  "@countdownProjectionText": { "placeholders": { "date": { "type": "String" } } },
+  "countdownSeconds": "Shuru hone mein seconds...",
+  "countdownSkip": "Timer Chhodein aur Shuru Karein",
+  "countdownCancel": "Cancel Karein aur Wapas Jayein",
+  "countdownEmptyError": "Is workout mein koi exercise nahi hai! Pehle ise edit karein.",
+  "importReviewTitle": "Import Review Karein",
+  "importDefaultTitle": "Import kiya gaya Plan",
+  "importWeeksGoal": "{weeks} Hafte  •  {goal}",
+  "@importWeeksGoal": { "placeholders": { "weeks": { "type": "int" }, "goal": { "type": "String" } } },
+  "importEditBtn": "Plan Details Badlein",
+  "importInstructions": "Device mein save karne se pehle kisi bhi workout par tap karke dekhein ya badlein.",
+  "importIncluded": "Shamil Workouts",
+  "importExercisesCount": "{count} Exercises",
+  "@importExercisesCount": { "placeholders": { "count": { "type": "int" } } },
+  "importSaving": "Save ho raha hai...",
+  "importSaveBtn": "Plan aur Workouts Save Karein",
+  "importFailed": "Import fail ho gaya: {error}",
+  "@importFailed": { "placeholders": { "error": { "type": "String" } } },
+  "importEditDialogTitle": "Plan Details Badlein",
+  "importEditNameLabel": "Plan ka Naam",
+  "importEditDescLabel": "Description",
+  "importEditGoalLabel": "Goal (Jaise: Muscle Banana)",
+  "importEditSaveBtn": "Details Save Karein",
+  "summaryPlanHistory": "Plan ki History",
+  "summaryWorkoutsCompleted": "Poore kiye gaye Workouts",
+  "summaryNoLogs": "Is run ke liye koi workout log nahi mila.",
+  "summaryWorkoutSession": "Workout Session (Volume: {vol})",
+  "@summaryWorkoutSession": { "placeholders": { "vol": { "type": "int" } } },
+  "logDetailSummary": "Workout ka Summary",
+  "logDetailExercises": "Poori ki gayi Exercises",
+  "logDetailNoExercises": "Is log mein koi exercise nahi mili."
 }

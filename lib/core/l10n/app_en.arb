@@ -135,5 +135,96 @@
   "detailActionEdit": "Edit",
   "detailActionShare": "Share",
   "detailActionDownload": "Download",
-  "detailActionDelete": "Delete"
+  "detailActionDelete": "Delete",
+  "planProgress": "Plan Progress",
+  "planConquered": "Plan Conquered!",
+  "planCompletedOn": "Completed on {date}",
+  "@planCompletedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "planClaimVictory": "Claim Victory & Reset Plan",
+  "planStart": "Start Plan",
+  "planResume": "Resume Plan",
+  "planResetTitle": "Reset Progress?",
+  "planResetContent": "This will uncheck all days and stop tracking the calendar dates.",
+  "planResetBtn": "Reset",
+  "planOptimizeBtn": "Optimize Schedule based on Feedback",
+  "planSchedule": "Schedule",
+  "planRestDay": "Rest Day",
+  "planRest": "Rest",
+  "planDayLabel": "Day\n{num}",
+  "@planDayLabel": {
+    "placeholders": {
+      "num": {
+        "type": "int"
+      }
+    }
+  },
+  "planActionShare": "Share Plan",
+  "planActionDownload": "Save to Device",
+  "planActionEdit": "Edit Plan",
+  "planActionDelete": "Delete Plan",
+  "planDeleteTitle": "Delete Plan?",
+  "planDeleteContent": "Are you sure you want to delete this workout plan? Your individual workouts will NOT be deleted.",
+  "builderPlanTitle": "Plan Builder",
+  "builderPlanName": "Plan Name",
+  "builderPlanNameHint": "E.g., 4-Week Shred",
+  "builderPlanDuration": "Duration",
+  "builderPlanWeeks": "{w} Weeks",
+  "@builderPlanWeeks": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      }
+    }
+  },
+  "builderPlanTapDay": "Tap a day to assign a workout:",
+  "builderAssignDay": "Assign Day {num}",
+  "@builderAssignDay": {
+    "placeholders": {
+      "num": {
+        "type": "int"
+      }
+    }
+  },
+  "searchWorkoutsHint": "Search workouts...",
+  "countdownDay": "Day {num}",
+  "@countdownDay": { "placeholders": { "num": { "type": "int" } } },
+  "countdownProjectionTitle": "Plan Projection",
+  "countdownProjectionText": "Keep up this pace and you will conquer this plan on:\n{date}",
+  "@countdownProjectionText": { "placeholders": { "date": { "type": "String" } } },
+  "countdownSeconds": "Seconds to start...",
+  "countdownSkip": "Skip Timer & Start Now",
+  "countdownCancel": "Cancel & Go Back",
+  "countdownEmptyError": "This workout has no exercises! Edit it first.",
+  "importReviewTitle": "Review Import",
+  "importDefaultTitle": "Imported Plan",
+  "importWeeksGoal": "{weeks} Weeks  •  {goal}",
+  "@importWeeksGoal": { "placeholders": { "weeks": { "type": "int" }, "goal": { "type": "String" } } },
+  "importEditBtn": "Edit Plan Details",
+  "importInstructions": "Tap any workout below to preview or edit it before saving this plan to your device.",
+  "importIncluded": "Included Workouts",
+  "importExercisesCount": "{count} Exercises",
+  "@importExercisesCount": { "placeholders": { "count": { "type": "int" } } },
+  "importSaving": "Saving...",
+  "importSaveBtn": "Save Plan & Workouts",
+  "importFailed": "Failed to import: {error}",
+  "@importFailed": { "placeholders": { "error": { "type": "String" } } },
+  "importEditDialogTitle": "Edit Plan Details",
+  "importEditNameLabel": "Plan Title",
+  "importEditDescLabel": "Description",
+  "importEditGoalLabel": "Goal (e.g. Build Muscle)",
+  "importEditSaveBtn": "Save Details",
+  "summaryPlanHistory": "Plan History",
+  "summaryWorkoutsCompleted": "Workouts Completed",
+  "summaryNoLogs": "No workout logs found for this run.",
+  "summaryWorkoutSession": "Workout Session (Volume: {vol})",
+  "@summaryWorkoutSession": { "placeholders": { "vol": { "type": "int" } } },
+  "logDetailSummary": "Workout Summary",
+  "logDetailExercises": "Exercises Completed",
+  "logDetailNoExercises": "No exercises found for this log."
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/presentation/active_workout_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
@@ -53,17 +54,16 @@ class _PlanCountdownScreenState extends ConsumerState<PlanCountdownScreen> {
   Future<void> _launchWorkout() async {
     if (_isStarting) return;
     _isStarting = true;
+    final l10n = AppLocalizations.of(context)!;
 
     final db = ref.read(databaseProvider);
     final rows = await db.getWorkoutDetails(widget.workoutId);
 
     if (rows.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This workout has no exercises! Edit it first.'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.countdownEmptyError)));
         Navigator.pop(context);
       }
       return;
@@ -90,7 +90,6 @@ class _PlanCountdownScreenState extends ConsumerState<PlanCountdownScreen> {
     final appLocale = ref.read(userProfileProvider).appLocale;
     final handler = ref.read(audioHandlerProvider);
 
-    // Start the audio engine
     handler.startWorkoutSequence(
       routine,
       widget.workoutTitle,
@@ -101,7 +100,6 @@ class _PlanCountdownScreenState extends ConsumerState<PlanCountdownScreen> {
     );
 
     if (!mounted) return;
-    // Replace the countdown screen with the active workout screen
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const ActiveWorkoutScreen()),
@@ -116,6 +114,7 @@ class _PlanCountdownScreenState extends ConsumerState<PlanCountdownScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final months = [
       'Jan',
       'Feb',
@@ -133,113 +132,143 @@ class _PlanCountdownScreenState extends ConsumerState<PlanCountdownScreen> {
     final dateStr =
         '${months[widget.endDate.month - 1]} ${widget.endDate.day}, ${widget.endDate.year}';
 
+    // FIX: Removed leading underscores
+    Widget buildLeftPanel() {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.calendar_month, size: 64, color: Colors.green),
+          const SizedBox(height: 24),
+          Text(
+            l10n.countdownDay(widget.dayNumber),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: Colors.grey),
+          ),
+          Text(
+            widget.workoutTitle,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withAlpha(100),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withAlpha(50),
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  l10n.countdownProjectionTitle,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.countdownProjectionText(dateStr),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget buildRightPanel() {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$_secondsLeft',
+            style: const TextStyle(
+              fontSize: 84,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          Text(
+            l10n.countdownSeconds,
+            style: const TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 48),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            ),
+            onPressed: () {
+              _timer?.cancel();
+              _launchWorkout();
+            },
+            icon: const Icon(Icons.bolt),
+            label: Text(l10n.countdownSkip),
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              _timer?.cancel();
+              Navigator.pop(context);
+            },
+            child: Text(
+              l10n.countdownCancel,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 600;
+
+            if (isWide) {
+              return Row(
                 children: [
-                  const Icon(
-                    Icons.calendar_month,
-                    size: 64,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Day ${widget.dayNumber}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineSmall?.copyWith(color: Colors.grey),
-                  ),
-                  Text(
-                    widget.workoutTitle,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-
-                  // The Projection Box
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primaryContainer.withAlpha(100),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withAlpha(50),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Plan Projection',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Keep up this pace and you will conquer this plan on:\n$dateStr',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(height: 1.5),
-                        ),
-                      ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: buildLeftPanel(),
                     ),
                   ),
-
-                  const SizedBox(height: 64),
-                  Text(
-                    '$_secondsLeft',
-                    style: const TextStyle(
-                      fontSize: 84,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const Text(
-                    'Seconds to start...',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                  const SizedBox(height: 48),
-
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                    ),
-                    onPressed: () {
-                      _timer?.cancel();
-                      _launchWorkout();
-                    },
-                    icon: const Icon(Icons.bolt),
-                    label: const Text('Skip Timer & Start Now'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      _timer?.cancel();
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
-                      'Cancel & Go Back',
-                      style: TextStyle(color: Colors.grey),
+                  const VerticalDivider(width: 1),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: buildRightPanel(),
                     ),
                   ),
                 ],
+              );
+            }
+
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    buildLeftPanel(),
+                    const SizedBox(height: 64),
+                    buildRightPanel(),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

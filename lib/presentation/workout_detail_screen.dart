@@ -626,11 +626,16 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
                             color: Colors.grey,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            '${l10n.exRestSets} ${_formatTime(details.restSecondsAfterSet)}',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
+                          // FIX: Wrapped in Expanded to prevent translation text overflow!
+                          Expanded(
+                            child: Text(
+                              '${l10n.exRestSets} ${_formatTime(details.restSecondsAfterSet)}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -650,12 +655,16 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
               children: [
                 const Icon(Icons.arrow_downward, size: 16, color: Colors.grey),
                 const SizedBox(width: 8),
-                Text(
-                  l10n.detailRestNext(_formatTime(restNext)),
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                // FIX: Wrapped in Flexible to allow centering but prevent overflow
+                Flexible(
+                  child: Text(
+                    l10n.detailRestNext(_formatTime(restNext)),
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],

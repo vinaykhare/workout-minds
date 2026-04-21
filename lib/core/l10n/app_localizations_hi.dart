@@ -332,4 +332,201 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get detailActionDelete => 'Hatao (Delete)';
+
+  @override
+  String get planProgress => 'Plan ka Progress';
+
+  @override
+  String get planConquered => 'Plan Poora Hua!';
+
+  @override
+  String planCompletedOn(String date) {
+    return '$date ko poora hua';
+  }
+
+  @override
+  String get planClaimVictory => 'Jeet ka Jashn Manayein aur Reset Karein';
+
+  @override
+  String get planStart => 'Plan Shuru Karein';
+
+  @override
+  String get planResume => 'Plan Wapas Shuru Karein';
+
+  @override
+  String get planResetTitle => 'Progress Reset Karein?';
+
+  @override
+  String get planResetContent =>
+      'Isse sabhi din uncheck ho jayenge aur calendar tracking ruk jayegi.';
+
+  @override
+  String get planResetBtn => 'Reset Karein';
+
+  @override
+  String get planOptimizeBtn =>
+      'Feedback ke hisaab se Schedule behtar banayein';
+
+  @override
+  String get planSchedule => 'Schedule';
+
+  @override
+  String get planRestDay => 'Aaram ka Din';
+
+  @override
+  String get planRest => 'Aaram';
+
+  @override
+  String planDayLabel(int num) {
+    return 'Din\n$num';
+  }
+
+  @override
+  String get planActionShare => 'Plan Share Karein';
+
+  @override
+  String get planActionDownload => 'Device mein Save karein';
+
+  @override
+  String get planActionEdit => 'Plan Badlein';
+
+  @override
+  String get planActionDelete => 'Plan Hatao';
+
+  @override
+  String get planDeleteTitle => 'Plan Delete Karein?';
+
+  @override
+  String get planDeleteContent =>
+      'Kya aap waqai is plan ko delete karna chahte hain? Aapke individual workouts delete NAHI honge.';
+
+  @override
+  String get builderPlanTitle => 'Plan Banayein';
+
+  @override
+  String get builderPlanName => 'Plan ka Naam';
+
+  @override
+  String get builderPlanNameHint => 'Jaise: 4-Week Shred';
+
+  @override
+  String get builderPlanDuration => 'Samay (Duration)';
+
+  @override
+  String builderPlanWeeks(int w) {
+    return '$w Hafte (Weeks)';
+  }
+
+  @override
+  String get builderPlanTapDay =>
+      'Workout assign karne ke liye kisi bhi din par tap karein:';
+
+  @override
+  String builderAssignDay(int num) {
+    return 'Din $num Assign Karein';
+  }
+
+  @override
+  String get searchWorkoutsHint => 'Workouts dhoondein...';
+
+  @override
+  String countdownDay(int num) {
+    return 'Din $num';
+  }
+
+  @override
+  String get countdownProjectionTitle => 'Plan ka Anuman';
+
+  @override
+  String countdownProjectionText(String date) {
+    return 'Agar aap aise hi chalte rahe, toh aapka plan is din poora hoga:\n$date';
+  }
+
+  @override
+  String get countdownSeconds => 'Shuru hone mein seconds...';
+
+  @override
+  String get countdownSkip => 'Timer Chhodein aur Shuru Karein';
+
+  @override
+  String get countdownCancel => 'Cancel Karein aur Wapas Jayein';
+
+  @override
+  String get countdownEmptyError =>
+      'Is workout mein koi exercise nahi hai! Pehle ise edit karein.';
+
+  @override
+  String get importReviewTitle => 'Import Review Karein';
+
+  @override
+  String get importDefaultTitle => 'Import kiya gaya Plan';
+
+  @override
+  String importWeeksGoal(int weeks, String goal) {
+    return '$weeks Hafte  •  $goal';
+  }
+
+  @override
+  String get importEditBtn => 'Plan Details Badlein';
+
+  @override
+  String get importInstructions =>
+      'Device mein save karne se pehle kisi bhi workout par tap karke dekhein ya badlein.';
+
+  @override
+  String get importIncluded => 'Shamil Workouts';
+
+  @override
+  String importExercisesCount(int count) {
+    return '$count Exercises';
+  }
+
+  @override
+  String get importSaving => 'Save ho raha hai...';
+
+  @override
+  String get importSaveBtn => 'Plan aur Workouts Save Karein';
+
+  @override
+  String importFailed(String error) {
+    return 'Import fail ho gaya: $error';
+  }
+
+  @override
+  String get importEditDialogTitle => 'Plan Details Badlein';
+
+  @override
+  String get importEditNameLabel => 'Plan ka Naam';
+
+  @override
+  String get importEditDescLabel => 'Description';
+
+  @override
+  String get importEditGoalLabel => 'Goal (Jaise: Muscle Banana)';
+
+  @override
+  String get importEditSaveBtn => 'Details Save Karein';
+
+  @override
+  String get summaryPlanHistory => 'Plan ki History';
+
+  @override
+  String get summaryWorkoutsCompleted => 'Poore kiye gaye Workouts';
+
+  @override
+  String get summaryNoLogs => 'Is run ke liye koi workout log nahi mila.';
+
+  @override
+  String summaryWorkoutSession(int vol) {
+    return 'Workout Session (Volume: $vol)';
+  }
+
+  @override
+  String get logDetailSummary => 'Workout ka Summary';
+
+  @override
+  String get logDetailExercises => 'Poori ki gayi Exercises';
+
+  @override
+  String get logDetailNoExercises => 'Is log mein koi exercise nahi mili.';
 }

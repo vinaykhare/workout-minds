@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/presentation/workout_builder/plan_details_screen.dart';
 import 'package:workout_minds/presentation/workout_builder/workout_builder_screen.dart';
 import 'package:workout_minds/repositories/providers.dart';
@@ -23,12 +24,10 @@ class _PlanImportPreviewScreenState
   @override
   void initState() {
     super.initState();
-    // Clone the data so we can edit it in memory
     _currentData = Map<String, dynamic>.from(widget.importData);
   }
 
-  // --- NEW: EDIT PLAN METADATA DIALOG ---
-  void _editPlanMetadata() {
+  void _editPlanMetadata(AppLocalizations l10n) {
     final titleCtrl = TextEditingController(
       text: _currentData['plan']['title'] ?? '',
     );
@@ -42,33 +41,33 @@ class _PlanImportPreviewScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Plan Details'),
+        title: Text(l10n.importEditDialogTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Plan Title',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.importEditNameLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: descCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.importEditDescLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 maxLines: 2,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: goalCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Goal (e.g. Build Muscle)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.importEditGoalLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -77,7 +76,10 @@ class _PlanImportPreviewScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           FilledButton(
             onPressed: () {
@@ -88,7 +90,7 @@ class _PlanImportPreviewScreenState
               });
               Navigator.pop(ctx);
             },
-            child: const Text('Save Details'),
+            child: Text(l10n.importEditSaveBtn),
           ),
         ],
       ),
@@ -129,8 +131,7 @@ class _PlanImportPreviewScreenState
                       'name': e.name,
                       'muscleGroup': 'Custom',
                       'imageUrl': e.imageUrl,
-                      'localImagePath':
-                          e.localImagePath, // Now properly caught!
+                      'localImagePath': e.localImagePath,
                       'targetSets': e.sets,
                       'targetReps': e.isDuration ? null : e.reps,
                       'targetDurationSeconds': e.isDuration
@@ -151,7 +152,7 @@ class _PlanImportPreviewScreenState
     );
   }
 
-  Future<void> _commitToDatabase() async {
+  Future<void> _commitToDatabase(AppLocalizations l10n) async {
     setState(() => _isSaving = true);
     try {
       final planId = await ref
@@ -161,8 +162,7 @@ class _PlanImportPreviewScreenState
       if (mounted) {
         ref.invalidate(plansStreamProvider);
         ref.invalidate(workoutsStreamProvider);
-
-        Navigator.pop(context); // Close the preview screen
+        Navigator.pop(context);
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => PlanDetailsScreen(planId: planId)),
@@ -173,7 +173,7 @@ class _PlanImportPreviewScreenState
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to import: $e'),
+            content: Text(l10n.importFailed(e.toString())),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -183,64 +183,91 @@ class _PlanImportPreviewScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final planInfo = _currentData['plan'];
     final workoutsMap = _currentData['workouts'] as Map<String, dynamic>;
     final uniqueWorkouts = workoutsMap.entries.toList();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Review Import')),
-      body: CustomScrollView(
+    // FIX: Removed leading underscores
+    Widget buildLeftPanel() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.file_download_done,
+            size: 80,
+            color: Colors.blueAccent,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            planInfo['title'] ?? l10n.importDefaultTitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.importWeeksGoal(
+              planInfo['totalWeeks'] ?? 4,
+              planInfo['goal'] ?? 'General',
+            ),
+            style: const TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _editPlanMetadata(l10n),
+            icon: const Icon(Icons.edit, size: 16),
+            label: Text(l10n.importEditBtn),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.importInstructions,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: _isSaving
+                // FIX: Removed invalid 'const' keyword
+                ? FilledButton.icon(
+                    onPressed: null,
+                    icon: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    label: Text('Saving...'),
+                  )
+                : FilledButton.icon(
+                    onPressed: () => _commitToDatabase(l10n),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.all(16),
+                    ),
+                    icon: const Icon(Icons.check),
+                    label: Text(
+                      l10n.importSaveBtn,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+          ),
+        ],
+      );
+    }
+
+    Widget buildRightPanel() {
+      return CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.file_download_done,
-                    size: 80,
-                    color: Colors.blueAccent,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    planInfo['title'] ?? 'Imported Plan',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${planInfo['totalWeeks']} Weeks  •  ${planInfo['goal'] ?? 'General'}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  // --- NEW: THE EDIT BUTTON ---
-                  TextButton.icon(
-                    onPressed: _editPlanMetadata,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit Plan Details'),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Tap any workout below to preview or edit it before saving this plan to your device.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 32),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Included Workouts',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                l10n.importIncluded,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -266,7 +293,7 @@ class _PlanImportPreviewScreenState
                     wData['title'],
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: Text('$exCount Exercises'),
+                  subtitle: Text(l10n.importExercisesCount(exCount)),
                   trailing: const Icon(
                     Icons.edit,
                     size: 18,
@@ -279,24 +306,150 @@ class _PlanImportPreviewScreenState
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.importReviewTitle)),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 800;
+
+          if (isWide) {
+            return Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: buildLeftPanel(),
+                  ),
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(flex: 2, child: buildRightPanel()),
+              ],
+            );
+          }
+
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.file_download_done,
+                        size: 80,
+                        color: Colors.blueAccent,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        planInfo['title'] ?? l10n.importDefaultTitle,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.importWeeksGoal(
+                          planInfo['totalWeeks'] ?? 4,
+                          planInfo['goal'] ?? 'General',
+                        ),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => _editPlanMetadata(l10n),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: Text(l10n.importEditBtn),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        l10n.importInstructions,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 32),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.importIncluded,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final refKey = uniqueWorkouts[index].key;
+                  final wData = uniqueWorkouts[index].value;
+                  final exCount = (wData['exercises'] as List).length;
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest.withAlpha(100),
+                    elevation: 0,
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        child: Icon(Icons.fitness_center, size: 20),
+                      ),
+                      title: Text(
+                        wData['title'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(l10n.importExercisesCount(exCount)),
+                      trailing: const Icon(
+                        Icons.edit,
+                        size: 18,
+                        color: Colors.grey,
+                      ),
+                      onTap: () => _editWorkout(refKey, wData),
+                    ),
+                  );
+                }, childCount: uniqueWorkouts.length),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          );
+        },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _isSaving
-          ? const FloatingActionButton.extended(
-              onPressed: null,
-              label: Text('Saving...'),
-              icon: CircularProgressIndicator(),
-            )
-          : FloatingActionButton.extended(
-              onPressed: _commitToDatabase,
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.check),
-              label: const Text(
-                'Save Plan & Workouts',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+      floatingActionButton: MediaQuery.of(context).size.width > 800
+          ? null
+          : (_isSaving
+                ? FloatingActionButton.extended(
+                    onPressed: null,
+                    label: Text(l10n.importSaving),
+                    icon: const CircularProgressIndicator(),
+                  )
+                : FloatingActionButton.extended(
+                    onPressed: () => _commitToDatabase(l10n),
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.check),
+                    label: Text(
+                      l10n.importSaveBtn,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  )),
     );
   }
 }

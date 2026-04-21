@@ -691,6 +691,348 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get detailActionDelete;
+
+  /// No description provided for @planProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Progress'**
+  String get planProgress;
+
+  /// No description provided for @planConquered.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Conquered!'**
+  String get planConquered;
+
+  /// No description provided for @planCompletedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed on {date}'**
+  String planCompletedOn(String date);
+
+  /// No description provided for @planClaimVictory.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim Victory & Reset Plan'**
+  String get planClaimVictory;
+
+  /// No description provided for @planStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Plan'**
+  String get planStart;
+
+  /// No description provided for @planResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume Plan'**
+  String get planResume;
+
+  /// No description provided for @planResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Progress?'**
+  String get planResetTitle;
+
+  /// No description provided for @planResetContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will uncheck all days and stop tracking the calendar dates.'**
+  String get planResetContent;
+
+  /// No description provided for @planResetBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get planResetBtn;
+
+  /// No description provided for @planOptimizeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize Schedule based on Feedback'**
+  String get planOptimizeBtn;
+
+  /// No description provided for @planSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get planSchedule;
+
+  /// No description provided for @planRestDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest Day'**
+  String get planRestDay;
+
+  /// No description provided for @planRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest'**
+  String get planRest;
+
+  /// No description provided for @planDayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Day\n{num}'**
+  String planDayLabel(int num);
+
+  /// No description provided for @planActionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Plan'**
+  String get planActionShare;
+
+  /// No description provided for @planActionDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Device'**
+  String get planActionDownload;
+
+  /// No description provided for @planActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Plan'**
+  String get planActionEdit;
+
+  /// No description provided for @planActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Plan'**
+  String get planActionDelete;
+
+  /// No description provided for @planDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Plan?'**
+  String get planDeleteTitle;
+
+  /// No description provided for @planDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this workout plan? Your individual workouts will NOT be deleted.'**
+  String get planDeleteContent;
+
+  /// No description provided for @builderPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Builder'**
+  String get builderPlanTitle;
+
+  /// No description provided for @builderPlanName.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Name'**
+  String get builderPlanName;
+
+  /// No description provided for @builderPlanNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'E.g., 4-Week Shred'**
+  String get builderPlanNameHint;
+
+  /// No description provided for @builderPlanDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get builderPlanDuration;
+
+  /// No description provided for @builderPlanWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'{w} Weeks'**
+  String builderPlanWeeks(int w);
+
+  /// No description provided for @builderPlanTapDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a day to assign a workout:'**
+  String get builderPlanTapDay;
+
+  /// No description provided for @builderAssignDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign Day {num}'**
+  String builderAssignDay(int num);
+
+  /// No description provided for @searchWorkoutsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search workouts...'**
+  String get searchWorkoutsHint;
+
+  /// No description provided for @countdownDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {num}'**
+  String countdownDay(int num);
+
+  /// No description provided for @countdownProjectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Projection'**
+  String get countdownProjectionTitle;
+
+  /// No description provided for @countdownProjectionText.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep up this pace and you will conquer this plan on:\n{date}'**
+  String countdownProjectionText(String date);
+
+  /// No description provided for @countdownSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Seconds to start...'**
+  String get countdownSeconds;
+
+  /// No description provided for @countdownSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip Timer & Start Now'**
+  String get countdownSkip;
+
+  /// No description provided for @countdownCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel & Go Back'**
+  String get countdownCancel;
+
+  /// No description provided for @countdownEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'This workout has no exercises! Edit it first.'**
+  String get countdownEmptyError;
+
+  /// No description provided for @importReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Import'**
+  String get importReviewTitle;
+
+  /// No description provided for @importDefaultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported Plan'**
+  String get importDefaultTitle;
+
+  /// No description provided for @importWeeksGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{weeks} Weeks  •  {goal}'**
+  String importWeeksGoal(int weeks, String goal);
+
+  /// No description provided for @importEditBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Plan Details'**
+  String get importEditBtn;
+
+  /// No description provided for @importInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap any workout below to preview or edit it before saving this plan to your device.'**
+  String get importInstructions;
+
+  /// No description provided for @importIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Included Workouts'**
+  String get importIncluded;
+
+  /// No description provided for @importExercisesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Exercises'**
+  String importExercisesCount(int count);
+
+  /// No description provided for @importSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get importSaving;
+
+  /// No description provided for @importSaveBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Plan & Workouts'**
+  String get importSaveBtn;
+
+  /// No description provided for @importFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to import: {error}'**
+  String importFailed(String error);
+
+  /// No description provided for @importEditDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Plan Details'**
+  String get importEditDialogTitle;
+
+  /// No description provided for @importEditNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Title'**
+  String get importEditNameLabel;
+
+  /// No description provided for @importEditDescLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get importEditDescLabel;
+
+  /// No description provided for @importEditGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal (e.g. Build Muscle)'**
+  String get importEditGoalLabel;
+
+  /// No description provided for @importEditSaveBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Details'**
+  String get importEditSaveBtn;
+
+  /// No description provided for @summaryPlanHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan History'**
+  String get summaryPlanHistory;
+
+  /// No description provided for @summaryWorkoutsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts Completed'**
+  String get summaryWorkoutsCompleted;
+
+  /// No description provided for @summaryNoLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout logs found for this run.'**
+  String get summaryNoLogs;
+
+  /// No description provided for @summaryWorkoutSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout Session (Volume: {vol})'**
+  String summaryWorkoutSession(int vol);
+
+  /// No description provided for @logDetailSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout Summary'**
+  String get logDetailSummary;
+
+  /// No description provided for @logDetailExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercises Completed'**
+  String get logDetailExercises;
+
+  /// No description provided for @logDetailNoExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'No exercises found for this log.'**
+  String get logDetailNoExercises;
 }
 
 class _AppLocalizationsDelegate
