@@ -257,4 +257,79 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get exInstructions => 'Instructions aur Tips';
+
+  @override
+  String get detailOptimizeBtn =>
+      'Feedback ke hisaab se Workout behtar banayein';
+
+  @override
+  String get detailOptimizingMsg =>
+      'Aapka feedback dekha ja raha hai...\nWorkout update ho raha hai...';
+
+  @override
+  String get detailOptimizeSuccess => '✨ Workout successfully update ho gaya!';
+
+  @override
+  String get detailNoExercises => 'Is workout mein koi exercise nahi mili.';
+
+  @override
+  String detailRestNext(String time) {
+    return 'Agli exercise se pehle $time aaram karein';
+  }
+
+  @override
+  String get detailStart => 'Workout Shuru Karein';
+
+  @override
+  String get detailRestart => 'Workout Phir Se Shuru Karein';
+
+  @override
+  String get detailRestartTitle => 'Workout wapas shuru karein?';
+
+  @override
+  String get detailEndActiveTitle => 'Chalu workout band karein?';
+
+  @override
+  String detailRestartContent(String workout) {
+    return 'Kya aap sach mein \"$workout\" ko shuruwat se karna chahte hain?';
+  }
+
+  @override
+  String detailEndActiveContent(String active, String target) {
+    return 'Kya aap apna chalu workout \"$active\" band karke \"$target\" shuru karna chahte hain?';
+  }
+
+  @override
+  String get detailEndAndStartBtn => 'Band karein aur Naya Shuru karein';
+
+  @override
+  String detailStatExercises(int count) {
+    return '$count Exercises';
+  }
+
+  @override
+  String detailStatSets(int count) {
+    return 'Kul $count Sets';
+  }
+
+  @override
+  String get detailStatEquipment => 'Equipment';
+
+  @override
+  String get detailStatVolume => 'Kul Wazan Uthaya';
+
+  @override
+  String get detailSummaryTitle => 'Workout ka Summary';
+
+  @override
+  String get detailActionEdit => 'Badlein (Edit)';
+
+  @override
+  String get detailActionShare => 'Share';
+
+  @override
+  String get detailActionDownload => 'Download';
+
+  @override
+  String get detailActionDelete => 'Hatao (Delete)';
 }

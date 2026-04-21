@@ -565,6 +565,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exercise Instructions & Tips'**
   String get exInstructions;
+
+  /// No description provided for @detailOptimizeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize Workout based on Feedback'**
+  String get detailOptimizeBtn;
+
+  /// No description provided for @detailOptimizingMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your feedback...\nOptimizing this workout...'**
+  String get detailOptimizingMsg;
+
+  /// No description provided for @detailOptimizeSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Workout Optimized Successfully!'**
+  String get detailOptimizeSuccess;
+
+  /// No description provided for @detailNoExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'No exercises found in this workout.'**
+  String get detailNoExercises;
+
+  /// No description provided for @detailRestNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest {time} before next exercise'**
+  String detailRestNext(String time);
+
+  /// No description provided for @detailStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Workout'**
+  String get detailStart;
+
+  /// No description provided for @detailRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart Workout'**
+  String get detailRestart;
+
+  /// No description provided for @detailRestartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart Workout?'**
+  String get detailRestartTitle;
+
+  /// No description provided for @detailEndActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End Active Workout?'**
+  String get detailEndActiveTitle;
+
+  /// No description provided for @detailRestartContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to restart \"{workout}\" from the beginning?'**
+  String detailRestartContent(String workout);
+
+  /// No description provided for @detailEndActiveContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to end your active workout \"{active}\" and start \"{target}\"?'**
+  String detailEndActiveContent(String active, String target);
+
+  /// No description provided for @detailEndAndStartBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'End & Start New'**
+  String get detailEndAndStartBtn;
+
+  /// No description provided for @detailStatExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Exercises'**
+  String detailStatExercises(int count);
+
+  /// No description provided for @detailStatSets.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Total Sets'**
+  String detailStatSets(int count);
+
+  /// No description provided for @detailStatEquipment.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment'**
+  String get detailStatEquipment;
+
+  /// No description provided for @detailStatVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Volume Lifted'**
+  String get detailStatVolume;
+
+  /// No description provided for @detailSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout Summary'**
+  String get detailSummaryTitle;
+
+  /// No description provided for @detailActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get detailActionEdit;
+
+  /// No description provided for @detailActionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get detailActionShare;
+
+  /// No description provided for @detailActionDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get detailActionDownload;
+
+  /// No description provided for @detailActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get detailActionDelete;
 }
 
 class _AppLocalizationsDelegate

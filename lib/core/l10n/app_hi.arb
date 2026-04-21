@@ -76,5 +76,64 @@
   "exTimeBased": "Time-based Exercise",
   "exEquipment": "Equipment (Zaroori nahi)",
   "exTargetWeight": "Target Wazan",
-  "exInstructions": "Instructions aur Tips"
+  "exInstructions": "Instructions aur Tips",
+  "detailOptimizeBtn": "Feedback ke hisaab se Workout behtar banayein",
+  "detailOptimizingMsg": "Aapka feedback dekha ja raha hai...\nWorkout update ho raha hai...",
+  "detailOptimizeSuccess": "✨ Workout successfully update ho gaya!",
+  "detailNoExercises": "Is workout mein koi exercise nahi mili.",
+  "detailRestNext": "Agli exercise se pehle {time} aaram karein",
+  "@detailRestNext": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "detailStart": "Workout Shuru Karein",
+  "detailRestart": "Workout Phir Se Shuru Karein",
+  "detailRestartTitle": "Workout wapas shuru karein?",
+  "detailEndActiveTitle": "Chalu workout band karein?",
+  "detailRestartContent": "Kya aap sach mein \"{workout}\" ko shuruwat se karna chahte hain?",
+  "@detailRestartContent": {
+    "placeholders": {
+      "workout": {
+        "type": "String"
+      }
+    }
+  },
+  "detailEndActiveContent": "Kya aap apna chalu workout \"{active}\" band karke \"{target}\" shuru karna chahte hain?",
+  "@detailEndActiveContent": {
+    "placeholders": {
+      "active": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "detailEndAndStartBtn": "Band karein aur Naya Shuru karein",
+  "detailStatExercises": "{count} Exercises",
+  "@detailStatExercises": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailStatSets": "Kul {count} Sets",
+  "@detailStatSets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailStatEquipment": "Equipment",
+  "detailStatVolume": "Kul Wazan Uthaya",
+  "detailSummaryTitle": "Workout ka Summary",
+  "detailActionEdit": "Badlein (Edit)",
+  "detailActionShare": "Share",
+  "detailActionDownload": "Download",
+  "detailActionDelete": "Hatao (Delete)"
 }

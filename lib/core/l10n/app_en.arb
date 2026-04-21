@@ -76,5 +76,64 @@
   "exTimeBased": "Time-based Exercise",
   "exEquipment": "Equipment (Opt.)",
   "exTargetWeight": "Target Weight",
-  "exInstructions": "Exercise Instructions & Tips"
+  "exInstructions": "Exercise Instructions & Tips",
+  "detailOptimizeBtn": "Optimize Workout based on Feedback",
+  "detailOptimizingMsg": "Analyzing your feedback...\nOptimizing this workout...",
+  "detailOptimizeSuccess": "✨ Workout Optimized Successfully!",
+  "detailNoExercises": "No exercises found in this workout.",
+  "detailRestNext": "Rest {time} before next exercise",
+  "@detailRestNext": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "detailStart": "Start Workout",
+  "detailRestart": "Restart Workout",
+  "detailRestartTitle": "Restart Workout?",
+  "detailEndActiveTitle": "End Active Workout?",
+  "detailRestartContent": "Are you sure you want to restart \"{workout}\" from the beginning?",
+  "@detailRestartContent": {
+    "placeholders": {
+      "workout": {
+        "type": "String"
+      }
+    }
+  },
+  "detailEndActiveContent": "Are you sure you want to end your active workout \"{active}\" and start \"{target}\"?",
+  "@detailEndActiveContent": {
+    "placeholders": {
+      "active": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "detailEndAndStartBtn": "End & Start New",
+  "detailStatExercises": "{count} Exercises",
+  "@detailStatExercises": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailStatSets": "{count} Total Sets",
+  "@detailStatSets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailStatEquipment": "Equipment",
+  "detailStatVolume": "Total Volume Lifted",
+  "detailSummaryTitle": "Workout Summary",
+  "detailActionEdit": "Edit",
+  "detailActionShare": "Share",
+  "detailActionDownload": "Download",
+  "detailActionDelete": "Delete"
 }

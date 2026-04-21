@@ -257,4 +257,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exInstructions => 'Exercise Instructions & Tips';
+
+  @override
+  String get detailOptimizeBtn => 'Optimize Workout based on Feedback';
+
+  @override
+  String get detailOptimizingMsg =>
+      'Analyzing your feedback...\nOptimizing this workout...';
+
+  @override
+  String get detailOptimizeSuccess => '✨ Workout Optimized Successfully!';
+
+  @override
+  String get detailNoExercises => 'No exercises found in this workout.';
+
+  @override
+  String detailRestNext(String time) {
+    return 'Rest $time before next exercise';
+  }
+
+  @override
+  String get detailStart => 'Start Workout';
+
+  @override
+  String get detailRestart => 'Restart Workout';
+
+  @override
+  String get detailRestartTitle => 'Restart Workout?';
+
+  @override
+  String get detailEndActiveTitle => 'End Active Workout?';
+
+  @override
+  String detailRestartContent(String workout) {
+    return 'Are you sure you want to restart \"$workout\" from the beginning?';
+  }
+
+  @override
+  String detailEndActiveContent(String active, String target) {
+    return 'Are you sure you want to end your active workout \"$active\" and start \"$target\"?';
+  }
+
+  @override
+  String get detailEndAndStartBtn => 'End & Start New';
+
+  @override
+  String detailStatExercises(int count) {
+    return '$count Exercises';
+  }
+
+  @override
+  String detailStatSets(int count) {
+    return '$count Total Sets';
+  }
+
+  @override
+  String get detailStatEquipment => 'Equipment';
+
+  @override
+  String get detailStatVolume => 'Total Volume Lifted';
+
+  @override
+  String get detailSummaryTitle => 'Workout Summary';
+
+  @override
+  String get detailActionEdit => 'Edit';
+
+  @override
+  String get detailActionShare => 'Share';
+
+  @override
+  String get detailActionDownload => 'Download';
+
+  @override
+  String get detailActionDelete => 'Delete';
 }
