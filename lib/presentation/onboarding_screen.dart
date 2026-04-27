@@ -696,6 +696,7 @@ class _SelectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return InkWell(
       onTap: onTap,
@@ -712,7 +713,7 @@ class _SelectionCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 32, color: isSelected ? primary : Colors.white),
+            Icon(icon, size: 32, color: isSelected ? primary : onSurface),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -723,7 +724,7 @@ class _SelectionCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? primary : Colors.white,
+                      color: isSelected ? primary : onSurface,
                     ),
                   ),
                   if (subtitle != null) ...[

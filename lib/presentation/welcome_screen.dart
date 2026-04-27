@@ -168,6 +168,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     }
 
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
 
     final heroSection = Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -177,10 +179,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         Text(
           l10n.appTitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -230,7 +232,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             ),
             child: Text(
               l10n.startFresh,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: onSurface, fontSize: 16),
             ),
           ),
         ],
