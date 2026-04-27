@@ -319,29 +319,41 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
   Future<void> _showRestDialog(
     BuildContext context,
     int index,
-    DraftExercise ex,
     WorkoutDraftNotifier notifier,
   ) async {
     final l10n = AppLocalizations.of(context)!;
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.exRestNext),
-        content: _DurationInputRow(
-          label: '',
-          totalSeconds: ex.restSecondsExercise,
-          onChanged: (val) => notifier.updateExercise(
-            index,
-            ex.copyWith(restSecondsExercise: val),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Done'),
-          ),
-        ],
+      builder: (ctx) => Consumer(
+        builder: (context, ref, _) {
+          final draftExercises = ref.watch(workoutDraftProvider);
+          if (index >= draftExercises.length) return const SizedBox.shrink();
+          final currentEx = draftExercises[index];
+
+          return AlertDialog(
+            title: Text(l10n.exRestNext),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DurationInputRow(
+                  label: '',
+                  totalSeconds: currentEx.restSecondsExercise,
+                  onChanged: (val) => notifier.updateExercise(
+                    index,
+                    currentEx.copyWith(restSecondsExercise: val),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Done'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1103,7 +1115,6 @@ class _WorkoutBuilderScreenState extends ConsumerState<WorkoutBuilderScreen> {
                                     onTap: () => _showRestDialog(
                                       context,
                                       index,
-                                      ex,
                                       notifier,
                                     ),
                                     child: Container(
@@ -1206,6 +1217,7 @@ class _NumberInputRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Ensure labels truncate cleanly instead of overflowing
@@ -1313,6 +1325,7 @@ class _DurationInputRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (label.isNotEmpty)
@@ -1399,6 +1412,7 @@ class _SwitchInputRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
