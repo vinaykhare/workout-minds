@@ -11,6 +11,7 @@ import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/data/local/database.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
 import 'package:workout_minds/presentation/welcome_screen.dart';
+import 'package:workout_minds/presentation/active_workout_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
@@ -21,6 +22,8 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   ref.onDispose(() => db.close());
   return db;
 });
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   // Ensure the engine is ready
@@ -63,7 +66,8 @@ class WorkoutMindsApp extends ConsumerStatefulWidget {
   ConsumerState<WorkoutMindsApp> createState() => _WorkoutMindsAppState();
 }
 
-class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
+class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp>
+    with WidgetsBindingObserver {
   late StreamSubscription _intentDataStreamSubscription;
   // FIX 2: Global key to show SnackBars safely from background processes!
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
@@ -72,6 +76,7 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       _intentDataStreamSubscription = ReceiveSharingIntent.instance
           .getMediaStream()
@@ -90,12 +95,38 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
         _handleSharedFile(value);
       });
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndNavigateToActiveWorkout();
+    });
   }
 
   @override
   void dispose() {
     _intentDataStreamSubscription.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkAndNavigateToActiveWorkout();
+    }
+  }
+
+  void _checkAndNavigateToActiveWorkout() {
+    final handler = ref.read(audioHandlerProvider);
+    final pbState = handler.playbackState.value;
+    final isPlayingSomething =
+        pbState.processingState != AudioProcessingState.idle;
+    if (isPlayingSomething && handler.currentWorkoutId != null) {
+      if (!isActiveWorkoutScreenOpen) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (context) => const ActiveWorkoutScreen()),
+        );
+      }
+    }
   }
 
   void _handleSharedFile(List<SharedMediaFile> files) async {
@@ -128,6 +159,7 @@ class _WorkoutMindsAppState extends ConsumerState<WorkoutMindsApp> {
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider);
     return MaterialApp(
+      navigatorKey: navigatorKey,
       scaffoldMessengerKey:
           _scaffoldMessengerKey, // FIX 3: Attach the key to MaterialApp!
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,

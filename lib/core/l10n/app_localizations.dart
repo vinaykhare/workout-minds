@@ -596,6 +596,12 @@ abstract class AppLocalizations {
   /// **'Rest {time} before next exercise'**
   String detailRestNext(String time);
 
+  /// No description provided for @detailResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume Workout'**
+  String get detailResume;
+
   /// No description provided for @detailStart.
   ///
   /// In en, this message translates to:

@@ -89,6 +89,7 @@
       }
     }
   },
+  "detailResume": "Resume Workout",
   "detailStart": "Start Workout",
   "detailRestart": "Restart Workout",
   "detailRestartTitle": "Restart Workout?",

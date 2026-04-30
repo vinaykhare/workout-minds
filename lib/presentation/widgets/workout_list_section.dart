@@ -94,13 +94,22 @@ class WorkoutListSection extends ConsumerWidget {
                       ),
                     ),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              WorkoutDetailScreen(workout: workout),
-                        ),
-                      );
+                      if (isActive) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActiveWorkoutScreen(),
+                          ),
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                WorkoutDetailScreen(workout: workout),
+                          ),
+                        );
+                      }
                     },
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,

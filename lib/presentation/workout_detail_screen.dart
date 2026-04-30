@@ -810,15 +810,49 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
                                 isPlayingSomething &&
                                 handler.currentWorkoutId == widget.workout.id;
 
+                            if (isActive) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  FilledButton.icon(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ActiveWorkoutScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: Text(
+                                      l10n.detailResume,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.all(20),
+                                      backgroundColor: Colors.green.shade600,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _startWorkout(rows, l10n),
+                                    icon: const Icon(Icons.restart_alt),
+                                    label: Text(l10n.detailRestart),
+                                  ),
+                                ],
+                              );
+                            }
+
                             return FilledButton.icon(
                               onPressed: () => _startWorkout(rows, l10n),
-                              icon: Icon(
-                                isActive ? Icons.restart_alt : Icons.play_arrow,
-                              ),
+                              icon: const Icon(Icons.play_arrow),
                               label: Text(
-                                isActive
-                                    ? l10n.detailRestart
-                                    : l10n.detailStart,
+                                l10n.detailStart,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -826,10 +860,9 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
                               ),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.all(20),
-                                backgroundColor: isActive
-                                    ? Colors.green.shade600
-                                    : Theme.of(context).colorScheme.primary,
-                                foregroundColor: isActive ? Colors.white : null,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
                               ),
                             );
                           },
@@ -886,13 +919,49 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
                               isPlayingSomething &&
                               handler.currentWorkoutId == widget.workout.id;
 
+                          if (isActive) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ActiveWorkoutScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.play_arrow),
+                                  label: Text(
+                                    l10n.detailResume,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.all(16),
+                                    backgroundColor: Colors.green.shade600,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () => _startWorkout(rows, l10n),
+                                  icon: const Icon(Icons.restart_alt),
+                                  label: Text(l10n.detailRestart),
+                                ),
+                              ],
+                            );
+                          }
+
                           return FilledButton.icon(
                             onPressed: () => _startWorkout(rows, l10n),
-                            icon: Icon(
-                              isActive ? Icons.restart_alt : Icons.play_arrow,
-                            ),
+                            icon: const Icon(Icons.play_arrow),
                             label: Text(
-                              isActive ? l10n.detailRestart : l10n.detailStart,
+                              l10n.detailStart,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -900,10 +969,9 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
                             ),
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.all(16),
-                              backgroundColor: isActive
-                                  ? Colors.green.shade600
-                                  : Theme.of(context).colorScheme.primary,
-                              foregroundColor: isActive ? Colors.white : null,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
                             ),
                           );
                         },

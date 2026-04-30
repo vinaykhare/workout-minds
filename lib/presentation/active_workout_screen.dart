@@ -8,6 +8,8 @@ import 'dart:convert';
 import 'package:workout_minds/services/workout_audio_handler.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 
+bool isActiveWorkoutScreenOpen = false;
+
 class ActiveWorkoutScreen extends ConsumerStatefulWidget {
   const ActiveWorkoutScreen({super.key});
 
@@ -363,6 +365,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   @override
   void initState() {
     super.initState();
+    isActiveWorkoutScreenOpen = true;
     final handler = ref.read(audioHandlerProvider);
     final db = ref.read(databaseProvider);
 
@@ -397,6 +400,12 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         Navigator.pop(context);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    isActiveWorkoutScreenOpen = false;
+    super.dispose();
   }
 
   Widget _flexButton({

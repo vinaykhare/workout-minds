@@ -278,6 +278,9 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String get detailResume => 'Workout Resume Karein';
+
+  @override
   String get detailStart => 'Workout Shuru Karein';
 
   @override
