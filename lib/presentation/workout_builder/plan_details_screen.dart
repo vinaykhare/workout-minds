@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/data/local/database.dart';
@@ -88,7 +89,41 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
     }
   }
 
-  void _handlePlayPlan(WorkoutPlan plan, List<dynamic> days) async {
+  void _handlePlayPlan(
+    WorkoutPlan plan,
+    List<dynamic> days,
+    AppLocalizations l10n,
+  ) async {
+    final handler = ref.read(audioHandlerProvider);
+    final pbState = handler.playbackState.value;
+    final isPlayingSomething =
+        pbState.processingState != AudioProcessingState.idle;
+
+    if (isPlayingSomething && handler.currentWorkoutId != null) {
+      final activeTitle = handler.mediaItem.value?.album ?? 'Active Workout';
+
+      bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.detailEndActiveTitle),
+          content: Text(l10n.detailEndActiveContent(activeTitle, plan.title)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+              child: Text(l10n.detailEndAndStartBtn),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+    }
+
     final db = ref.read(databaseProvider);
     var nextUndoneRow = days
         .where((r) => !r.readTable(db.workoutPlanDays).isCompleted)
@@ -140,6 +175,7 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
 
     if (cleanTarget.isAfter(cleanToday)) {
       final dateStr = _formatDate(cleanTarget);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('You are done for today! Next workout is on $dateStr.'),
@@ -395,7 +431,7 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.green,
                   ),
-                  onPressed: () => _handlePlayPlan(plan, days),
+                  onPressed: () => _handlePlayPlan(plan, days, l10n),
                 ),
               ),
               const SizedBox(width: 8),
