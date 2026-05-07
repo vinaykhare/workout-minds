@@ -532,4 +532,219 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get logDetailNoExercises => 'Is log mein koi exercise nahi mili.';
+
+  @override
+  String get settingsAndProfile => 'Settings aur Profile';
+
+  @override
+  String get currentBmi => 'Aapka BMI';
+
+  @override
+  String get bmiUnknown => 'Agyat';
+
+  @override
+  String get bmiUnderweight => 'Kam Wazan';
+
+  @override
+  String get bmiNormal => 'Sahi Wazan';
+
+  @override
+  String get bmiOverweight => 'Zyada Wazan';
+
+  @override
+  String get bmiObese => 'Motapa';
+
+  @override
+  String get appPreferences => 'App Preferences';
+
+  @override
+  String get appLanguage => 'App ki Bhasha';
+
+  @override
+  String get langEnglish => 'English';
+
+  @override
+  String get langHinglish => 'Hinglish';
+
+  @override
+  String get bodyMetrics => 'Body Metrics';
+
+  @override
+  String get fitnessJourney => 'Fitness Journey';
+
+  @override
+  String get subscriptionAndAi => 'Subscription aur AI';
+
+  @override
+  String get aiCreditsRemaining => 'Bache hue AI Credits';
+
+  @override
+  String get unlimitedByok => 'Unlimited (BYOK)';
+
+  @override
+  String get syncing => 'Sync ho raha hai...';
+
+  @override
+  String get errorLoading => 'Load hone mein error';
+
+  @override
+  String get getAiCreditsTitle => '5 AI Credits payein';
+
+  @override
+  String get getAiCreditsSub => 'Rs. 100/- ek mahine ke liye';
+
+  @override
+  String get buy => 'Khareedein';
+
+  @override
+  String get paymentPending => 'Payment gateway integration abhi baaki hai.';
+
+  @override
+  String get powerUserTitle => 'Power User (BYOK)';
+
+  @override
+  String get powerUserSub =>
+      'Rs. 10/- ek mahine ke liye.\nPower Users ke liye behtar.';
+
+  @override
+  String get byokCancelled => 'BYOK Subscription cancel ho gaya.';
+
+  @override
+  String get byokUnlocked => 'BYOK Mode khul gaya!';
+
+  @override
+  String get subscribe => 'Subscribe karein';
+
+  @override
+  String get powerUserConfig => 'POWER USER CONFIG';
+
+  @override
+  String get customGeminiKey => 'Custom Gemini API Key';
+
+  @override
+  String get apiKeySaved => 'API Key save ho gayi!';
+
+  @override
+  String get preferredAiModel => 'Pusandeeda AI Model';
+
+  @override
+  String get cloudBackup => 'Cloud Backup';
+
+  @override
+  String get autoSyncTitle => 'Workouts Auto-Sync karein';
+
+  @override
+  String get autoSyncSub => 'Workout khatam hone par khud backup banayega.';
+
+  @override
+  String get autoSyncEnabled => 'Auto-Sync chalu ho gaya!';
+
+  @override
+  String get autoSyncFailed => 'Auto-Sync chalu nahi ho saka. Auth fail.';
+
+  @override
+  String get backupToDrive => 'Google Drive par Backup banayein';
+
+  @override
+  String get restoreFromCloud => 'Cloud se Restore karein';
+
+  @override
+  String get deleteCloudBackup => 'Cloud Backup Delete karein';
+
+  @override
+  String get deleteCloudBackupSub =>
+      'Google Drive se apna data hamesha ke liye hatayein';
+
+  @override
+  String get deleteCloudDataTitle => 'Cloud Data Delete karein?';
+
+  @override
+  String get deleteCloudDataContent =>
+      'Isse aapka workout history aur profile Google Drive se hamesha ke liye delete ho jayega. \n\nAapke phone ka data safe rahega.';
+
+  @override
+  String get deleteBackupBtn => 'Backup Delete karein';
+
+  @override
+  String get deletingFromDrive => 'Google Drive se delete ho raha hai...';
+
+  @override
+  String get cloudBackupDeleted =>
+      'Cloud backup hamesha ke liye delete ho gaya.';
+
+  @override
+  String get failedToDeleteBackup => 'Backup delete nahi ho saka.';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get logOut => 'Log Out karein';
+
+  @override
+  String get signOutDesc => 'Google aur Firebase se sign out karein';
+
+  @override
+  String get dangerZone => 'Danger Zone';
+
+  @override
+  String get eraseAllData => 'Saara Data Hatayein aur Restart karein';
+
+  @override
+  String get eraseAllDataSub => 'Workout history aur settings wipe karega.';
+
+  @override
+  String get factoryReset => 'Factory Reset';
+
+  @override
+  String get factoryResetContent =>
+      'Isse aapke sabhi workout logs, custom routines, aur settings hamesha ke liye delete ho jayenge.';
+
+  @override
+  String get typeDeleteToConfirm => 'Confirm karne ke liye \"DELETE\" likhein:';
+
+  @override
+  String get eraseEverythingBtn => 'SAB KUCH ERASE KAREIN';
+
+  @override
+  String updateTitle(String title) {
+    return '$title Update Karein';
+  }
+
+  @override
+  String get save => 'Save karein';
+
+  @override
+  String get ok => 'Theek hai';
+
+  @override
+  String get starting => 'Shuru ho raha hai...';
+
+  @override
+  String get backupFailed => 'Backup fail ho gaya.';
+
+  @override
+  String get restoreComplete => 'Restore poora hua!';
+
+  @override
+  String get restoreFailed => 'Restore fail ho gaya.';
+
+  @override
+  String get cloudRestoreTitle => 'Cloud Restore';
+
+  @override
+  String get cloudBackupTitle => 'Cloud Backup';
+
+  @override
+  String get signIn => 'Sign In karein';
+
+  @override
+  String get signInDesc =>
+      'AI features aur Cloud Backup ke liye Google se sign in karein.';
+
+  @override
+  String get signedInAs => 'Aapka account:';
+
+  @override
+  String get signInWithGoogle => 'Google se Sign in karein';
 }

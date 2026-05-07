@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1066867092574",
+    "project_id": "workout-minds-9687d",
+    "storage_bucket": "workout-minds-9687d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066867092574:android:def814bc025d5efeee98cf",
+        "android_client_info": {
+          "package_name": "io.github.vinaykhare.workout_minds"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1066867092574-4g54r1hcu0ielcbosulb5k1c7oispp0s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCbpV57NVbnT64xx9MQyJ2DNVsHO8SYrY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1066867092574-4g54r1hcu0ielcbosulb5k1c7oispp0s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

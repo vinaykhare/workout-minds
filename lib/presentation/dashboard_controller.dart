@@ -20,18 +20,6 @@ class DashboardController extends _$DashboardController {
   Future<void> generateWorkout(String prompt) async {
     final profile = ref.read(userProfileProvider);
 
-    // 1. FIX: Added the `!profile.isPro` check.
-    // Pro users bypass this block entirely, even if credits are 0!
-    if (!profile.isPro && profile.aiCredits <= 0) {
-      state = AsyncValue.error(
-        Exception(
-          "You've used all your free AI generations! Upgrade to Pro for unlimited AI workouts.",
-        ),
-        StackTrace.current,
-      );
-      return;
-    }
-
     // Set state to loading so the UI shows the spinner
     state = const AsyncLoading();
 
@@ -40,19 +28,14 @@ class DashboardController extends _$DashboardController {
         final repository = ref.read(aiRepositoryProvider);
         final currentLocale = profile.appLocale;
 
+        // The repository handles the Firestore credit deduction securely!
         await repository.generateWithTools(prompt, currentLocale, profile);
 
-        // 2. FIX: Burn a credit upon successful generation!
-        // (Remember, our Notifier ignores this if they are Pro)
-        await ref.read(userProfileProvider.notifier).useAiCredit();
-
-        // --- FIX 1: FIRE BACKGROUND SYNC AFTER SINGLE WORKOUT ---
+        // --- FIRE BACKGROUND SYNC AFTER SINGLE WORKOUT ---
         if (profile.isAutoSyncEnabled) {
           final profileJsonString = jsonEncode(profile.toJson());
           ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
         }
-
-        // Refresh the list from Drift
 
         // Refresh the list from Drift
         return await ref
@@ -60,7 +43,7 @@ class DashboardController extends _$DashboardController {
             .select(ref.read(databaseProvider).workouts)
             .get();
       } catch (e) {
-        // 3. FIX: Intercept specific Quota/Server errors before the guard catches them
+        // Intercept specific Quota/Server errors before the guard catches them
         String errorMessage = e.toString();
         if (errorMessage.contains('429') ||
             errorMessage.contains('exhausted') ||

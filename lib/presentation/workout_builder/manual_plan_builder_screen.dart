@@ -7,6 +7,7 @@ import 'package:workout_minds/repositories/providers.dart';
 class ManualPlanBuilderScreen extends ConsumerStatefulWidget {
   final int? existingPlanId;
   final String? existingTitle;
+  final String? existingDescription;
   final int? existingWeeks;
   final Map<int, Workout>? existingSchedule;
 
@@ -16,6 +17,7 @@ class ManualPlanBuilderScreen extends ConsumerStatefulWidget {
     this.existingTitle,
     this.existingWeeks,
     this.existingSchedule,
+    this.existingDescription,
   });
 
   @override
@@ -26,6 +28,7 @@ class ManualPlanBuilderScreen extends ConsumerStatefulWidget {
 class _ManualPlanBuilderScreenState
     extends ConsumerState<ManualPlanBuilderScreen> {
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descController = TextEditingController(); // NEW
   int _selectedWeeks = 4;
   final Map<int, Workout> _schedule = {};
 
@@ -33,6 +36,9 @@ class _ManualPlanBuilderScreenState
   void initState() {
     super.initState();
     _titleController.text = widget.existingTitle ?? '';
+    _descController.text = widget.existingDescription ?? '';
+    // We don't currently pass existingDescription in the widget properties,
+    // but this prepares us for when we do!
     if (widget.existingWeeks != null) _selectedWeeks = widget.existingWeeks!;
     if (widget.existingSchedule != null) {
       _schedule.addAll(widget.existingSchedule!);
@@ -42,11 +48,14 @@ class _ManualPlanBuilderScreenState
   @override
   void dispose() {
     _titleController.dispose();
+    _descController.dispose(); // NEW
     super.dispose();
   }
 
   Future<void> _savePlan() async {
     final title = _titleController.text.trim();
+    final description = _descController.text.trim(); // NEW
+
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a plan title.')),
@@ -66,13 +75,19 @@ class _ManualPlanBuilderScreenState
             .updateManualPlan(
               widget.existingPlanId!,
               title,
+              description, // NEW: Pass to DB
               _selectedWeeks,
               dbSchedule,
             );
       } else {
         await ref
             .read(databaseProvider)
-            .createManualPlan(title, _selectedWeeks, dbSchedule);
+            .createManualPlan(
+              title,
+              description, // NEW: Pass to DB
+              _selectedWeeks,
+              dbSchedule,
+            );
       }
 
       if (mounted) {
@@ -260,6 +275,16 @@ class _ManualPlanBuilderScreenState
             hintText: l10n.builderPlanNameHint,
           ),
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _descController,
+          maxLines: 2,
+          decoration: InputDecoration(
+            labelText: l10n.importEditDescLabel, // Reusing translation
+            border: const OutlineInputBorder(),
+            hintText: 'E.g., A high-intensity plan to burn fat.',
+          ),
         ),
         const SizedBox(height: 16),
         InputDecorator(

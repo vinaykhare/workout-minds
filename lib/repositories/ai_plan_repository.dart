@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -11,12 +13,51 @@ class AIPlanRepository {
 
   AIPlanRepository(this._model, this._db);
 
+  // --- CLOUD AI CREDIT VERIFICATION ---
+  Future<DocumentReference?> _checkCredits(UserProfile profile) async {
+    if (profile.isPro) return null;
+    if (profile.customApiKey.isNotEmpty) return null; // BYOK is free!
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception(
+        'Authentication required! Run a Cloud Backup or Restore in Settings to link your Google account and unlock AI.',
+      );
+    }
+
+    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final snapshot = await docRef.get();
+    final credits = snapshot.exists
+        ? ((snapshot.data() as Map<String, dynamic>)['credits'] as int? ?? 0)
+        : 2;
+
+    if (credits <= 0) {
+      throw Exception('Out of free AI Credits! Please upgrade to Power User.');
+    }
+    return docRef;
+  }
+
+  Future<void> _deductCredit(DocumentReference? docRef) async {
+    if (docRef == null) return;
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) {
+        transaction.set(docRef, {'credits': 1}); // First gen used
+      } else {
+        transaction.update(docRef, {
+          'credits':
+              ((snapshot.data() as Map<String, dynamic>)['credits'] as int) - 1,
+        });
+      }
+    });
+  }
+
   // FIX 1: Pass the UserProfile in so the AI knows their stats!
   Future<int> generateAndSavePlan(
     String userPrompt,
     UserProfile profile,
   ) async {
     try {
+      final docRef = await _checkCredits(profile);
       // --- 1. THE SMART ADAPT LOOP (Fetch Historical Feedback) ---
       final recentLogs =
           await (_db.select(_db.workoutLogs)
@@ -199,6 +240,8 @@ class AIPlanRepository {
                 );
           }
         }
+
+        await _deductCredit(docRef);
       });
 
       return newPlanId;
@@ -213,6 +256,7 @@ class AIPlanRepository {
   // =====================================================================
   Future<void> optimizePlan(int planId, UserProfile profile) async {
     try {
+      final docRef = await _checkCredits(profile);
       // 1. Fetch the current plan metadata
       final plan = await _db.getPlan(planId);
 
@@ -386,6 +430,8 @@ class AIPlanRepository {
                 );
           }
         }
+
+        await _deductCredit(docRef);
       });
     } catch (e) {
       debugPrint("Mid-Plan Optimization Error: $e");

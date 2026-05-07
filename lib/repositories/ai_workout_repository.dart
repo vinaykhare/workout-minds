@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:drift/drift.dart';
 import 'package:workout_minds/data/local/database.dart';
@@ -37,11 +39,50 @@ class AIWorkoutRepository {
     );
   }
 
+  // --- CLOUD AI CREDIT VERIFICATION ---
+  Future<DocumentReference?> _checkCredits(UserProfile profile) async {
+    if (profile.isPro) return null;
+    if (profile.customApiKey.isNotEmpty) return null; // BYOK is free!
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception(
+        'Authentication required! Run a Cloud Backup or Restore in Settings to link your Google account and unlock AI.',
+      );
+    }
+
+    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final snapshot = await docRef.get();
+    final credits = snapshot.exists
+        ? ((snapshot.data() as Map<String, dynamic>)['credits'] as int? ?? 0)
+        : 2;
+
+    if (credits <= 0) {
+      throw Exception('Out of free AI Credits! Please upgrade to Power User.');
+    }
+    return docRef;
+  }
+
+  Future<void> _deductCredit(DocumentReference? docRef) async {
+    if (docRef == null) return;
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) {
+        transaction.set(docRef, {'credits': 1}); // First gen used
+      } else {
+        transaction.update(docRef, {
+          'credits':
+              ((snapshot.data() as Map<String, dynamic>)['credits'] as int) - 1,
+        });
+      }
+    });
+  }
+
   Future<void> generateWithTools(
     String userPrompt,
     String appLocale,
     UserProfile profile,
   ) async {
+    final docRef = await _checkCredits(profile);
     final chat = _model.startChat();
 
     // Inject the Hinglish directive conditionally
@@ -217,6 +258,8 @@ class AIWorkoutRepository {
                   ),
                 );
           }
+
+          await _deductCredit(docRef);
         });
       } catch (e) {
         throw Exception(
@@ -231,6 +274,7 @@ class AIWorkoutRepository {
   // =====================================================================
   Future<void> optimizeWorkout(int workoutId, UserProfile profile) async {
     try {
+      final docRef = await _checkCredits(profile);
       // 1. Fetch current workout & its exercises to give Gemini context
       final workout = await (_db.select(
         _db.workouts,
@@ -386,6 +430,8 @@ class AIWorkoutRepository {
                 ),
               );
         }
+
+        await _deductCredit(docRef);
       });
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));

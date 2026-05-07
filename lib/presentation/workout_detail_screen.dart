@@ -11,6 +11,7 @@ import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/presentation/workout_builder/workout_builder_screen.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
 import 'active_workout_screen.dart';
+import 'package:workout_minds/core/utils/ai_guard.dart';
 
 class WorkoutDetailScreen extends ConsumerStatefulWidget {
   final Workout workout;
@@ -39,6 +40,8 @@ class _WorkoutDetailScreenState extends ConsumerState<WorkoutDetailScreen> {
   }
 
   Future<void> _handleOptimizeWorkout(AppLocalizations l10n) async {
+    if (!await AIGuard.check(context, ref)) return;
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,

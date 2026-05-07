@@ -9,6 +9,8 @@ import 'package:path/path.dart' as p;
 import 'package:drift/drift.dart';
 import 'package:workout_minds/data/local/database.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DriveSyncService {
   final AppDatabase _db;
@@ -70,6 +72,36 @@ class DriveSyncService {
 
       // V3 extension method: get the authClient using the scopes
       final authClient = authorization.authClient(scopes: scopes);
+
+      // --- NEW: Sign into Firebase Auth using the Google Credentials ---
+      try {
+        final googleAuth = account.authentication;
+
+        // FIX: Reverted back to authorization.accessToken!
+        final credential = GoogleAuthProvider.credential(
+          accessToken: authorization.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(
+          credential,
+        );
+
+        // --- Initialize Firestore Document for New Users ---
+        final user = userCredential.user;
+        if (user != null) {
+          final docRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid);
+          final docSnap = await docRef.get();
+          if (!docSnap.exists) {
+            // First time login! Grant 3 free credits.
+            await docRef.set({'credits': 3, 'isPro': false, 'proExpiry': null});
+          }
+        }
+      } catch (e) {
+        debugPrint("====== FIREBASE AUTH CRASH ======\n$e");
+      }
 
       return drive.DriveApi(authClient);
     } catch (e) {
@@ -488,7 +520,23 @@ class DriveSyncService {
     }
   }
 
+  /// Manually triggers the Google Sign-In and Firebase Auth flow
+  Future<bool> signIn({Function(String)? onStatus}) async {
+    try {
+      onStatus?.call('Signing in with Google...');
+      final driveApi = await _getDriveApi();
+      return driveApi != null;
+    } catch (e) {
+      debugPrint("Manual Sign-In Error: $e");
+      onStatus?.call('Sign in failed.');
+      return false;
+    }
+  }
+
   Future<void> signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
     await _googleSignIn.signOut();
   }
 }

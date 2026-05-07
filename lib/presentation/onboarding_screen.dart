@@ -6,6 +6,7 @@ import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
+import 'package:workout_minds/core/utils/ai_guard.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -72,7 +73,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       squatCapacity: _squats,
       heightCm: _height,
       weightKg: _weight,
-      aiCredits: 3,
+      aiCredits: 2,
       isPro: false,
       customApiKey: '',
       customModelName: '',
@@ -444,30 +445,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             l10n.assessPushups,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _pushups.toDouble(),
-                  min: 0,
-                  max: 100,
-                  divisions: 100,
-                  activeColor: Colors.blueAccent,
-                  onChanged: (val) => setState(() => _pushups = val.toInt()),
-                ),
-              ),
-              SizedBox(
-                width: 60,
-                child: Text(
-                  '$_pushups',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          _SliderWithTextInput(
+            value: _pushups.toDouble(),
+            min: 0,
+            max: 100,
+            divisions: 100,
+            activeColor: Colors.blueAccent,
+            onChanged: (val) => setState(() => _pushups = val.toInt()),
           ),
           const SizedBox(height: 24),
 
@@ -475,30 +459,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             l10n.assessPullups,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _pullups.toDouble(),
-                  min: 0,
-                  max: 50,
-                  divisions: 50,
-                  activeColor: Colors.redAccent,
-                  onChanged: (val) => setState(() => _pullups = val.toInt()),
-                ),
-              ),
-              SizedBox(
-                width: 60,
-                child: Text(
-                  '$_pullups',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          _SliderWithTextInput(
+            value: _pullups.toDouble(),
+            min: 0,
+            max: 50,
+            divisions: 50,
+            activeColor: Colors.redAccent,
+            onChanged: (val) => setState(() => _pullups = val.toInt()),
           ),
           const SizedBox(height: 24),
 
@@ -506,30 +473,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             l10n.assessSquats,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _squats.toDouble(),
-                  min: 0,
-                  max: 200,
-                  divisions: 100,
-                  activeColor: Colors.green,
-                  onChanged: (val) => setState(() => _squats = val.toInt()),
-                ),
-              ),
-              SizedBox(
-                width: 60,
-                child: Text(
-                  '$_squats',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          _SliderWithTextInput(
+            value: _squats.toDouble(),
+            min: 0,
+            max: 200,
+            divisions: 100,
+            activeColor: Colors.green,
+            onChanged: (val) => setState(() => _squats = val.toInt()),
           ),
           const SizedBox(height: 48),
 
@@ -556,54 +506,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             l10n.heightLabel,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _height,
-                  min: 120,
-                  max: 220,
-                  divisions: 100,
-                  onChanged: (val) => setState(() => _height = val),
-                ),
-              ),
-              Text(
-                '${_height.toInt()} cm',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          _SliderWithTextInput(
+            value: _height,
+            min: 120,
+            max: 220,
+            divisions: 100,
+            activeColor: Colors.blueAccent,
+            suffix: 'cm',
+            onChanged: (val) => setState(() => _height = val),
           ),
           const SizedBox(height: 32),
+
           Text(
             l10n.weightLabel,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _weight,
-                  min: 40,
-                  max: 150,
-                  divisions: 110,
-                  onChanged: (val) => setState(() => _weight = val),
-                ),
-              ),
-              Text(
-                '${_weight.toInt()} kg',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          _SliderWithTextInput(
+            value: _weight,
+            min: 40,
+            max: 150,
+            divisions: 110,
+            activeColor: Colors.blueAccent,
+            suffix: 'kg',
+            onChanged: (val) => setState(() => _weight = val),
           ),
           const SizedBox(height: 48),
+
           FilledButton.icon(
-            onPressed: _finishOnboarding,
+            onPressed: () async {
+              if (await AIGuard.check(context, ref)) {
+                _finishOnboarding();
+              }
+            },
             icon: const Icon(Icons.auto_awesome, color: Colors.amberAccent),
             style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
             label: Text(
@@ -738,6 +672,105 @@ class _SelectionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// --- NEW INTERACTIVE SLIDER COMPONENT ---
+class _SliderWithTextInput extends StatefulWidget {
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final Color activeColor;
+  final String suffix;
+  final ValueChanged<double> onChanged;
+
+  const _SliderWithTextInput({
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.activeColor,
+    this.suffix = '',
+    required this.onChanged,
+  });
+
+  @override
+  State<_SliderWithTextInput> createState() => _SliderWithTextInputState();
+}
+
+class _SliderWithTextInputState extends State<_SliderWithTextInput> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value.toInt().toString());
+  }
+
+  @override
+  void didUpdateWidget(covariant _SliderWithTextInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      final newValStr = widget.value.toInt().toString();
+      if (_controller.text != newValStr) {
+        _controller.text = newValStr;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Slider(
+            value: widget.value,
+            min: widget.min,
+            max: widget.max,
+            divisions: widget.divisions,
+            activeColor: widget.activeColor,
+            onChanged: widget.onChanged,
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 80, // Enough room for the number and suffix
+          child: TextField(
+            controller: _controller,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            decoration: InputDecoration(
+              isDense: true,
+              suffixText: widget.suffix,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 8,
+                horizontal: 4,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onSubmitted: (val) {
+              final parsed = double.tryParse(val);
+              if (parsed != null) {
+                widget.onChanged(parsed.clamp(widget.min, widget.max));
+              } else {
+                // Revert to old value if they typed garbage
+                _controller.text = widget.value.toInt().toString();
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 }

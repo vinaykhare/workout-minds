@@ -9,6 +9,7 @@ import 'package:workout_minds/presentation/workout_detail_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'plan_countdown_screen.dart';
+import 'package:workout_minds/core/utils/ai_guard.dart';
 
 class PlanDetailsScreen extends ConsumerStatefulWidget {
   final int planId;
@@ -38,6 +39,8 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
   }
 
   Future<void> _handleOptimizePlan(AppLocalizations l10n) async {
+    if (!await AIGuard.check(context, ref)) return;
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -248,6 +251,7 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
                 builder: (context) => ManualPlanBuilderScreen(
                   existingPlanId: plan.id,
                   existingTitle: plan.title,
+                  existingDescription: plan.description,
                   existingWeeks: plan.totalWeeks,
                   existingSchedule: currentSchedule,
                 ),

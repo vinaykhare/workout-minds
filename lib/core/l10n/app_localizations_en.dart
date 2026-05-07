@@ -529,4 +529,218 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logDetailNoExercises => 'No exercises found for this log.';
+
+  @override
+  String get settingsAndProfile => 'Settings & Profile';
+
+  @override
+  String get currentBmi => 'Current BMI';
+
+  @override
+  String get bmiUnknown => 'Unknown';
+
+  @override
+  String get bmiUnderweight => 'Underweight';
+
+  @override
+  String get bmiNormal => 'Normal Weight';
+
+  @override
+  String get bmiOverweight => 'Overweight';
+
+  @override
+  String get bmiObese => 'Obese';
+
+  @override
+  String get appPreferences => 'App Preferences';
+
+  @override
+  String get appLanguage => 'App Language';
+
+  @override
+  String get langEnglish => 'English';
+
+  @override
+  String get langHinglish => 'Hinglish';
+
+  @override
+  String get bodyMetrics => 'Body Metrics';
+
+  @override
+  String get fitnessJourney => 'Fitness Journey';
+
+  @override
+  String get subscriptionAndAi => 'Subscription & AI';
+
+  @override
+  String get aiCreditsRemaining => 'AI Credits Remaining';
+
+  @override
+  String get unlimitedByok => 'Unlimited (BYOK)';
+
+  @override
+  String get syncing => 'Syncing...';
+
+  @override
+  String get errorLoading => 'Error loading';
+
+  @override
+  String get getAiCreditsTitle => 'Get 5 AI Credits';
+
+  @override
+  String get getAiCreditsSub => 'Rs. 100/- for a month';
+
+  @override
+  String get buy => 'Buy';
+
+  @override
+  String get paymentPending => 'Payment gateway integration pending.';
+
+  @override
+  String get powerUserTitle => 'Power User (BYOK)';
+
+  @override
+  String get powerUserSub =>
+      'Rs. 10/- for a month.\nRecommended for Power Users.';
+
+  @override
+  String get byokCancelled => 'BYOK Subscription Cancelled.';
+
+  @override
+  String get byokUnlocked => 'BYOK Mode Unlocked!';
+
+  @override
+  String get subscribe => 'Subscribe';
+
+  @override
+  String get powerUserConfig => 'POWER USER CONFIG';
+
+  @override
+  String get customGeminiKey => 'Custom Gemini API Key';
+
+  @override
+  String get apiKeySaved => 'API Key Saved!';
+
+  @override
+  String get preferredAiModel => 'Preferred AI Model';
+
+  @override
+  String get cloudBackup => 'Cloud Backup';
+
+  @override
+  String get autoSyncTitle => 'Auto-Sync Workouts';
+
+  @override
+  String get autoSyncSub => 'Silently backs up when you finish a workout.';
+
+  @override
+  String get autoSyncEnabled => 'Auto-Sync Enabled!';
+
+  @override
+  String get autoSyncFailed => 'Could not enable Auto-Sync. Auth failed.';
+
+  @override
+  String get backupToDrive => 'Backup to Google Drive';
+
+  @override
+  String get restoreFromCloud => 'Restore from Cloud';
+
+  @override
+  String get deleteCloudBackup => 'Delete Cloud Backup';
+
+  @override
+  String get deleteCloudBackupSub =>
+      'Permanently remove your data from Google Drive';
+
+  @override
+  String get deleteCloudDataTitle => 'Delete Cloud Data?';
+
+  @override
+  String get deleteCloudDataContent =>
+      'This will permanently remove your workout history and profile from Google Drive. \n\nYour local data on this phone will NOT be affected.';
+
+  @override
+  String get deleteBackupBtn => 'Delete Backup';
+
+  @override
+  String get deletingFromDrive => 'Deleting from Google Drive...';
+
+  @override
+  String get cloudBackupDeleted => 'Cloud backup permanently deleted.';
+
+  @override
+  String get failedToDeleteBackup => 'Failed to delete backup.';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get logOut => 'Log Out';
+
+  @override
+  String get signOutDesc => 'Sign out of Google and Firebase';
+
+  @override
+  String get dangerZone => 'Danger Zone';
+
+  @override
+  String get eraseAllData => 'Erase All Data & Restart';
+
+  @override
+  String get eraseAllDataSub => 'Wipes all workout history and resets app.';
+
+  @override
+  String get factoryReset => 'Factory Reset';
+
+  @override
+  String get factoryResetContent =>
+      'This will permanently delete all your workout logs, custom routines, and settings. This cannot be undone.';
+
+  @override
+  String get typeDeleteToConfirm => 'Type \"DELETE\" to confirm:';
+
+  @override
+  String get eraseEverythingBtn => 'ERASE EVERYTHING';
+
+  @override
+  String updateTitle(String title) {
+    return 'Update $title';
+  }
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get starting => 'Starting...';
+
+  @override
+  String get backupFailed => 'Backup Failed.';
+
+  @override
+  String get restoreComplete => 'Restore Complete!';
+
+  @override
+  String get restoreFailed => 'Restore Failed.';
+
+  @override
+  String get cloudRestoreTitle => 'Cloud Restore';
+
+  @override
+  String get cloudBackupTitle => 'Cloud Backup';
+
+  @override
+  String get signIn => 'Sign In';
+
+  @override
+  String get signInDesc =>
+      'Sign in with Google to unlock AI features and Cloud Backup.';
+
+  @override
+  String get signedInAs => 'Signed in as';
+
+  @override
+  String get signInWithGoogle => 'Sign in with Google';
 }

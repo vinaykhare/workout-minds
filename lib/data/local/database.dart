@@ -328,6 +328,7 @@ class AppDatabase extends _$AppDatabase {
   // --- MANUAL PLAN BUILDER LOGIC ---
   Future<int> createManualPlan(
     String title,
+    String description,
     int weeks,
     Map<int, int> scheduleWorkoutIds,
   ) async {
@@ -336,6 +337,7 @@ class AppDatabase extends _$AppDatabase {
       final planId = await into(workoutPlans).insert(
         WorkoutPlansCompanion.insert(
           title: title,
+          description: Value(description.isEmpty ? null : description),
           totalWeeks: Value(weeks),
           goal: const Value('Custom Plan'),
         ),
@@ -362,13 +364,18 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateManualPlan(
     int planId,
     String title,
+    String description,
     int weeks,
     Map<int, int> scheduleWorkoutIds,
   ) async {
     return transaction(() async {
       // 1. Update the Umbrella Plan details
       await (update(workoutPlans)..where((t) => t.id.equals(planId))).write(
-        WorkoutPlansCompanion(title: Value(title), totalWeeks: Value(weeks)),
+        WorkoutPlansCompanion(
+          title: Value(title),
+          description: Value(description.isEmpty ? null : description),
+          totalWeeks: Value(weeks),
+        ),
       );
 
       // 2. Wipe the old schedule completely

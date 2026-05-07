@@ -18,6 +18,7 @@ import 'package:workout_minds/presentation/workout_builder/workout_builder_scree
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/repositories/workout_builder/workout_builder_provider.dart';
+import 'package:workout_minds/core/utils/ai_guard.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -254,7 +255,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: l10n.aiGenerate,
-            onPressed: () => _showAiGenerator(context, ref),
+            onPressed: () async {
+              if (await AIGuard.check(context, ref)) {
+                if (!context.mounted) return;
+                _showAiGenerator(context, ref);
+              }
+            },
           ),
           IconButton(
             icon: const Icon(Icons.import_export),

@@ -10,6 +10,8 @@ import 'package:workout_minds/services/drive_sync_service.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
 import 'package:workout_minds/services/workout_share_service.dart';
 import 'ai_workout_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // The Database Provider
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -328,4 +330,29 @@ final planScheduleProvider = FutureProvider.family<List<TypedResult>, int>((
 // Add this near your other stream providers (like `recentHistoryProvider`)
 final recentPlanLogsProvider = StreamProvider<List<PlanLogData>>((ref) {
   return ref.read(databaseProvider).watchRecentPlanLogs();
+});
+
+final firestoreCreditsProvider = StreamProvider.autoDispose<int>((ref) {
+  // FIX: Actively watch the auth state so this provider rebuilds upon login/logout!
+  final authState = ref.watch(authStateProvider);
+  final user = authState.value;
+
+  // If the user isn't logged into Firebase yet, default to 0
+  if (user == null) return Stream.value(0);
+
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.exists && snapshot.data() != null) {
+          return snapshot.data()!['credits'] as int? ?? 0;
+        }
+        return 0; // Fallback if the document hasn't been created yet
+      });
+});
+
+// Exposes the real-time Firebase authentication state
+final authStateProvider = StreamProvider<User?>((ref) {
+  return FirebaseAuth.instance.authStateChanges();
 });

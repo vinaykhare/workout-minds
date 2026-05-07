@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
-import 'dashboard_screen.dart'; // <--- Added missing import
+import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -19,6 +19,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   bool _isLoading = false;
   String _statusText = '';
+  bool _hasSkippedSignIn = false; // Tracks the new Sign-In Step
 
   Future<void> _handleRestore() async {
     setState(() {
@@ -39,12 +40,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           backgroundColor: Colors.orange,
         ),
       );
-
-      // --- FIX 2: They connected to Drive, so default Auto-Sync to ON! ---
       await ref
           .read(userProfileProvider.notifier)
           .updateField('isAutoSyncEnabled', true);
-
       _startFresh();
       return;
     }
@@ -79,7 +77,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     }
   }
 
-  // --- FIX 3: Dynamic Button Text & Correct Dashboard Routing ---
   void _showWeightConfirmation(double lastKnownWeight) {
     double currentWeight = lastKnownWeight;
     final isHi = ref.read(userProfileProvider).appLocale == 'hi';
@@ -90,7 +87,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => Consumer(
           builder: (context, ref, child) {
-            // Check if the user moved the slider!
             final weightChanged = currentWeight != lastKnownWeight;
             final btnText = weightChanged
                 ? (isHi ? 'Weight Update Karein' : 'Update Weight Now')
@@ -134,7 +130,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           .updateField('weightKg', currentWeight);
 
                       if (dialogContext.mounted) {
-                        // THIS WAS THE MISSING PIECE! Route to Dashboard and kill history.
                         Navigator.of(dialogContext).pushAndRemoveUntil(
                           MaterialPageRoute(
                             builder: (context) => const DashboardScreen(),
@@ -160,14 +155,92 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (kIsWeb || Platform.isWindows) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _startFresh());
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+  // --- NEW: STEP 1 - SIGN IN UI ---
+  Widget _buildSignInStep(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
 
-    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              const Icon(
+                Icons.auto_awesome,
+                size: 100,
+                color: Colors.blueAccent,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Unlock AI Fitness',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Sign in with Google to enable AI Workout Generation, Optimization, and Cloud Backups.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
+                  );
+                  final success = await ref.read(driveSyncProvider).signIn();
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close loader
+                    if (!success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Sign in failed. Please try again.'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('Sign in with Google'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.all(20),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => setState(() => _hasSkippedSignIn = true),
+                child: const Text(
+                  'Skip for now',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- EXISTING: STEP 2 - RESTORE UI ---
+  Widget _buildRestoreStep(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
 
@@ -240,7 +313,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     );
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -291,5 +364,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (kIsWeb || Platform.isWindows) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startFresh());
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    final authUser = ref.watch(authStateProvider).value;
+
+    // STEP 1: Ask for Login if they haven't skipped it and aren't logged in
+    if (authUser == null && !_hasSkippedSignIn) {
+      return _buildSignInStep(context, l10n);
+    }
+
+    // STEP 2: Restore from Drive or Start Fresh
+    return _buildRestoreStep(context, l10n);
   }
 }

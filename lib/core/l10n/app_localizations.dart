@@ -1039,6 +1039,420 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No exercises found for this log.'**
   String get logDetailNoExercises;
+
+  /// No description provided for @settingsAndProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings & Profile'**
+  String get settingsAndProfile;
+
+  /// No description provided for @currentBmi.
+  ///
+  /// In en, this message translates to:
+  /// **'Current BMI'**
+  String get currentBmi;
+
+  /// No description provided for @bmiUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get bmiUnknown;
+
+  /// No description provided for @bmiUnderweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Underweight'**
+  String get bmiUnderweight;
+
+  /// No description provided for @bmiNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal Weight'**
+  String get bmiNormal;
+
+  /// No description provided for @bmiOverweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Overweight'**
+  String get bmiOverweight;
+
+  /// No description provided for @bmiObese.
+  ///
+  /// In en, this message translates to:
+  /// **'Obese'**
+  String get bmiObese;
+
+  /// No description provided for @appPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'App Preferences'**
+  String get appPreferences;
+
+  /// No description provided for @appLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App Language'**
+  String get appLanguage;
+
+  /// No description provided for @langEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get langEnglish;
+
+  /// No description provided for @langHinglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Hinglish'**
+  String get langHinglish;
+
+  /// No description provided for @bodyMetrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Body Metrics'**
+  String get bodyMetrics;
+
+  /// No description provided for @fitnessJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness Journey'**
+  String get fitnessJourney;
+
+  /// No description provided for @subscriptionAndAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription & AI'**
+  String get subscriptionAndAi;
+
+  /// No description provided for @aiCreditsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Credits Remaining'**
+  String get aiCreditsRemaining;
+
+  /// No description provided for @unlimitedByok.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited (BYOK)'**
+  String get unlimitedByok;
+
+  /// No description provided for @syncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get syncing;
+
+  /// No description provided for @errorLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading'**
+  String get errorLoading;
+
+  /// No description provided for @getAiCreditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get 5 AI Credits'**
+  String get getAiCreditsTitle;
+
+  /// No description provided for @getAiCreditsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Rs. 100/- for a month'**
+  String get getAiCreditsSub;
+
+  /// No description provided for @buy.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy'**
+  String get buy;
+
+  /// No description provided for @paymentPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment gateway integration pending.'**
+  String get paymentPending;
+
+  /// No description provided for @powerUserTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Power User (BYOK)'**
+  String get powerUserTitle;
+
+  /// No description provided for @powerUserSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Rs. 10/- for a month.\nRecommended for Power Users.'**
+  String get powerUserSub;
+
+  /// No description provided for @byokCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'BYOK Subscription Cancelled.'**
+  String get byokCancelled;
+
+  /// No description provided for @byokUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'BYOK Mode Unlocked!'**
+  String get byokUnlocked;
+
+  /// No description provided for @subscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe'**
+  String get subscribe;
+
+  /// No description provided for @powerUserConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'POWER USER CONFIG'**
+  String get powerUserConfig;
+
+  /// No description provided for @customGeminiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Gemini API Key'**
+  String get customGeminiKey;
+
+  /// No description provided for @apiKeySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key Saved!'**
+  String get apiKeySaved;
+
+  /// No description provided for @preferredAiModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred AI Model'**
+  String get preferredAiModel;
+
+  /// No description provided for @cloudBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Backup'**
+  String get cloudBackup;
+
+  /// No description provided for @autoSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-Sync Workouts'**
+  String get autoSyncTitle;
+
+  /// No description provided for @autoSyncSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Silently backs up when you finish a workout.'**
+  String get autoSyncSub;
+
+  /// No description provided for @autoSyncEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-Sync Enabled!'**
+  String get autoSyncEnabled;
+
+  /// No description provided for @autoSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not enable Auto-Sync. Auth failed.'**
+  String get autoSyncFailed;
+
+  /// No description provided for @backupToDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup to Google Drive'**
+  String get backupToDrive;
+
+  /// No description provided for @restoreFromCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Cloud'**
+  String get restoreFromCloud;
+
+  /// No description provided for @deleteCloudBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Cloud Backup'**
+  String get deleteCloudBackup;
+
+  /// No description provided for @deleteCloudBackupSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently remove your data from Google Drive'**
+  String get deleteCloudBackupSub;
+
+  /// No description provided for @deleteCloudDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Cloud Data?'**
+  String get deleteCloudDataTitle;
+
+  /// No description provided for @deleteCloudDataContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently remove your workout history and profile from Google Drive. \n\nYour local data on this phone will NOT be affected.'**
+  String get deleteCloudDataContent;
+
+  /// No description provided for @deleteBackupBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Backup'**
+  String get deleteBackupBtn;
+
+  /// No description provided for @deletingFromDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting from Google Drive...'**
+  String get deletingFromDrive;
+
+  /// No description provided for @cloudBackupDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud backup permanently deleted.'**
+  String get cloudBackupDeleted;
+
+  /// No description provided for @failedToDeleteBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete backup.'**
+  String get failedToDeleteBackup;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// No description provided for @logOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Log Out'**
+  String get logOut;
+
+  /// No description provided for @signOutDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of Google and Firebase'**
+  String get signOutDesc;
+
+  /// No description provided for @dangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get dangerZone;
+
+  /// No description provided for @eraseAllData.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase All Data & Restart'**
+  String get eraseAllData;
+
+  /// No description provided for @eraseAllDataSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Wipes all workout history and resets app.'**
+  String get eraseAllDataSub;
+
+  /// No description provided for @factoryReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory Reset'**
+  String get factoryReset;
+
+  /// No description provided for @factoryResetContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete all your workout logs, custom routines, and settings. This cannot be undone.'**
+  String get factoryResetContent;
+
+  /// No description provided for @typeDeleteToConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Type \"DELETE\" to confirm:'**
+  String get typeDeleteToConfirm;
+
+  /// No description provided for @eraseEverythingBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'ERASE EVERYTHING'**
+  String get eraseEverythingBtn;
+
+  /// No description provided for @updateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update {title}'**
+  String updateTitle(String title);
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @starting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting...'**
+  String get starting;
+
+  /// No description provided for @backupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Failed.'**
+  String get backupFailed;
+
+  /// No description provided for @restoreComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Complete!'**
+  String get restoreComplete;
+
+  /// No description provided for @restoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Failed.'**
+  String get restoreFailed;
+
+  /// No description provided for @cloudRestoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Restore'**
+  String get cloudRestoreTitle;
+
+  /// No description provided for @cloudBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Backup'**
+  String get cloudBackupTitle;
+
+  /// No description provided for @signIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get signIn;
+
+  /// No description provided for @signInDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google to unlock AI features and Cloud Backup.'**
+  String get signInDesc;
+
+  /// No description provided for @signedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as'**
+  String get signedInAs;
+
+  /// No description provided for @signInWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get signInWithGoogle;
 }
 
 class _AppLocalizationsDelegate
