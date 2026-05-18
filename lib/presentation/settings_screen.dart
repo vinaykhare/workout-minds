@@ -85,7 +85,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final notifier = ref.read(userProfileProvider.notifier);
     final l10n = AppLocalizations.of(context)!;
     final bmiColor = _getBMIColor(profile.bmi);
-
+    ref.listen<UserProfile>(userProfileProvider, (previous, next) {
+      // Only fire if Auto-Sync was ALREADY on.
+      // (This prevents double-syncing when the user toggles the switch itself, which has its own loading dialog).
+      if (previous != null &&
+          previous.isAutoSyncEnabled &&
+          next.isAutoSyncEnabled) {
+        final profileJsonString = jsonEncode(next.toJson());
+        ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
+      }
+    });
     // Watch Auth and Credits
     final authState = ref.watch(authStateProvider);
     final user = authState.value;
@@ -800,17 +809,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         l10n.backupToDrive,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      onTap: () {
-                        final profileJsonString = jsonEncode(profile.toJson());
-
-                        showDialog(
+                      onTap: () async {
+                        // NEW: Explicit Backup Warning
+                        final confirm = await showDialog<bool>(
                           context: context,
-                          barrierDismissible: false,
-                          builder: (context) => SyncProgressDialog(
-                            isBackup: true,
-                            profileJson: profileJsonString,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(l10n.backupOverwriteTitle),
+                            content: Text(l10n.backupOverwriteContent),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: Text(
+                                  l10n.cancel,
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: Text(l10n.backupNowBtn),
+                              ),
+                            ],
                           ),
                         );
+
+                        if (confirm == true && context.mounted) {
+                          final profileJsonString = jsonEncode(
+                            profile.toJson(),
+                          );
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => SyncProgressDialog(
+                              isBackup: true,
+                              profileJson: profileJsonString,
+                            ),
+                          );
+                        }
                       },
                     ),
                     const Divider(height: 1),
@@ -823,13 +857,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         l10n.restoreFromCloud,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      onTap: () {
-                        showDialog(
+                      onTap: () async {
+                        // NEW: Explicit Restore Warning
+                        final confirm = await showDialog<bool>(
                           context: context,
-                          barrierDismissible: false,
-                          builder: (context) =>
-                              const SyncProgressDialog(isBackup: false),
+                          builder: (ctx) => AlertDialog(
+                            title: Row(
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(l10n.restoreOverwriteTitle),
+                                ),
+                              ],
+                            ),
+                            content: Text(l10n.restoreOverwriteContent),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: Text(
+                                  l10n.cancel,
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                ),
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: Text(l10n.restoreDataBtn),
+                              ),
+                            ],
+                          ),
                         );
+
+                        if (confirm == true && context.mounted) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) =>
+                                const SyncProgressDialog(isBackup: false),
+                          );
+                        }
                       },
                     ),
                     const Divider(height: 1),

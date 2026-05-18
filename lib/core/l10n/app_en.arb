@@ -25,7 +25,7 @@
   "genderMale": "Male",
   "genderFemale": "Female",
   "welcomeSubtitle": "Your AI-powered fitness journey,\nsynced securely with Google Drive.",
-  "restoreGoogle": "Restore from Google Drive",
+  "restoreGoogle": "Restore Existing Backup",
   "startFresh": "Start Fresh",
   "chooseLanguageTitle": "Choose Language",
   "chooseLanguageSub": "How would you like the app to talk to you?",
@@ -303,5 +303,11 @@
   "signIn": "Sign In",
   "signInDesc": "Sign in with Google to unlock AI features and Cloud Backup.",
   "signedInAs": "Signed in as",
-  "signInWithGoogle": "Sign in with Google"
+  "signInWithGoogle": "Sign in with Google",
+  "backupOverwriteTitle": "Overwrite Cloud Backup?",
+  "backupOverwriteContent": "This will replace your existing Google Drive backup with the workouts currently on this device. Cloud-only workouts will be lost.",
+  "backupNowBtn": "Backup Now",
+  "restoreOverwriteTitle": "Overwrite Local Data?",
+  "restoreOverwriteContent": "Restoring will wipe the workouts currently on this device and replace them with your Google Drive backup. Any un-synced local workouts will be lost.",
+  "restoreDataBtn": "Restore Data"
 }

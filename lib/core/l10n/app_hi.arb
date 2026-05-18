@@ -25,7 +25,7 @@
   "genderMale": "Purush (Male)",
   "genderFemale": "Mahila (Female)",
   "welcomeSubtitle": "Aapka AI fitness journey,\nGoogle Drive ke saath securely synced.",
-  "restoreGoogle": "Google Drive se Restore karein",
+  "restoreGoogle": "Maujooda Backup Restore Karein",
   "startFresh": "Nayi Shuruvaat",
   "chooseLanguageTitle": "Bhasha Chunein",
   "chooseLanguageSub": "Aap app ko kis bhasha mein use karna chahenge?",
@@ -303,5 +303,11 @@
   "signIn": "Sign In karein",
   "signInDesc": "AI features aur Cloud Backup ke liye Google se sign in karein.",
   "signedInAs": "Aapka account:",
-  "signInWithGoogle": "Google se Sign in karein"
+  "signInWithGoogle": "Google se Sign in karein",
+  "backupOverwriteTitle": "Cloud Backup Overwrite Karein?",
+  "backupOverwriteContent": "Isse Google Drive ka purana backup is phone ke current workouts se replace ho jayega. Cloud-only workouts delete ho jayenge.",
+  "backupNowBtn": "Abhi Backup Karein",
+  "restoreOverwriteTitle": "Local Data Overwrite Karein?",
+  "restoreOverwriteContent": "Restore karne se is phone ke sabhi workouts delete ho jayenge aur Google Drive ke backup se replace ho jayenge. Un-synced local workouts hamesha ke liye chale jayenge.",
+  "restoreDataBtn": "Data Restore Karein"
 }

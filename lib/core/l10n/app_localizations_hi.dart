@@ -100,7 +100,7 @@ class AppLocalizationsHi extends AppLocalizations {
       'Aapka AI fitness journey,\nGoogle Drive ke saath securely synced.';
 
   @override
-  String get restoreGoogle => 'Google Drive se Restore karein';
+  String get restoreGoogle => 'Maujooda Backup Restore Karein';
 
   @override
   String get startFresh => 'Nayi Shuruvaat';
@@ -747,4 +747,24 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Google se Sign in karein';
+
+  @override
+  String get backupOverwriteTitle => 'Cloud Backup Overwrite Karein?';
+
+  @override
+  String get backupOverwriteContent =>
+      'Isse Google Drive ka purana backup is phone ke current workouts se replace ho jayega. Cloud-only workouts delete ho jayenge.';
+
+  @override
+  String get backupNowBtn => 'Abhi Backup Karein';
+
+  @override
+  String get restoreOverwriteTitle => 'Local Data Overwrite Karein?';
+
+  @override
+  String get restoreOverwriteContent =>
+      'Restore karne se is phone ke sabhi workouts delete ho jayenge aur Google Drive ke backup se replace ho jayenge. Un-synced local workouts hamesha ke liye chale jayenge.';
+
+  @override
+  String get restoreDataBtn => 'Data Restore Karein';
 }

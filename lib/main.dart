@@ -30,6 +30,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   // Ensure the engine is ready
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   // 1. Initialize SharedPreferences before the app starts
   final prefs = await SharedPreferences.getInstance();
 
@@ -57,7 +58,6 @@ Future<void> main() async {
     ),
   );
 
-  await dotenv.load(fileName: ".env");
   runApp(
     ProviderScope(
       // Inject the initialized audioHandler into the Riverpod tree

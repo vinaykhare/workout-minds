@@ -40,54 +40,83 @@ class _PlanDetailsScreenState extends ConsumerState<PlanDetailsScreen> {
 
   Future<void> _handleOptimizePlan(AppLocalizations l10n) async {
     if (!await AIGuard.check(context, ref)) return;
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: Colors.amber),
-            const SizedBox(height: 16),
-            Text(
-              l10n.detailOptimizingMsg,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
+
+    bool aiSuccess = false;
+
+    while (!aiSuccess) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Colors.amber),
+              const SizedBox(height: 16),
+              Text(
+                l10n.detailOptimizingMsg,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    try {
-      final profile = ref.read(userProfileProvider);
-      await ref
-          .read(aiPlanRepositoryProvider)
-          .optimizePlan(widget.planId, profile);
+      try {
+        final profile = ref.read(userProfileProvider);
+        await ref
+            .read(aiPlanRepositoryProvider)
+            .optimizePlan(widget.planId, profile);
 
-      if (mounted) {
-        Navigator.pop(context);
-        ref.invalidate(planDetailsProvider);
-        ref.invalidate(planScheduleProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.detailOptimizeSuccess),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        aiSuccess = true;
+
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          ref.invalidate(planDetailsProvider);
+          ref.invalidate(planScheduleProvider);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.detailOptimizeSuccess),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+
+          final shouldRetry = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Optimization Failed'),
+              content: Text(
+                '${e.toString().replaceAll('Exception: ', '')}\n\nWould you like to try again?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(
+                    l10n.cancel,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  label: const Text('Try Again'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldRetry != true) {
+            break;
+          }
+        }
       }
     }
   }

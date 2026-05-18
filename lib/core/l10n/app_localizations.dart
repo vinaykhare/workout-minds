@@ -257,7 +257,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreGoogle.
   ///
   /// In en, this message translates to:
-  /// **'Restore from Google Drive'**
+  /// **'Restore Existing Backup'**
   String get restoreGoogle;
 
   /// No description provided for @startFresh.
@@ -1453,6 +1453,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in with Google'**
   String get signInWithGoogle;
+
+  /// No description provided for @backupOverwriteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite Cloud Backup?'**
+  String get backupOverwriteTitle;
+
+  /// No description provided for @backupOverwriteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will replace your existing Google Drive backup with the workouts currently on this device. Cloud-only workouts will be lost.'**
+  String get backupOverwriteContent;
+
+  /// No description provided for @backupNowBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Now'**
+  String get backupNowBtn;
+
+  /// No description provided for @restoreOverwriteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite Local Data?'**
+  String get restoreOverwriteTitle;
+
+  /// No description provided for @restoreOverwriteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring will wipe the workouts currently on this device and replace them with your Google Drive backup. Any un-synced local workouts will be lost.'**
+  String get restoreOverwriteContent;
+
+  /// No description provided for @restoreDataBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Data'**
+  String get restoreDataBtn;
 }
 
 class _AppLocalizationsDelegate

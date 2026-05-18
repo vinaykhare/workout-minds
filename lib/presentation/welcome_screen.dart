@@ -129,6 +129,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           .read(userProfileProvider.notifier)
                           .updateField('weightKg', currentWeight);
 
+                      final finalProfile = ref.read(userProfileProvider);
+                      if (finalProfile.isAutoSyncEnabled) {
+                        final profileJsonString = jsonEncode(
+                          finalProfile.toJson(),
+                        );
+                        ref
+                            .read(driveSyncProvider)
+                            .backupToCloud(profileJsonString)
+                            .ignore();
+                      }
+
                       if (dialogContext.mounted) {
                         Navigator.of(dialogContext).pushAndRemoveUntil(
                           MaterialPageRoute(

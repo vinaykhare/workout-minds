@@ -55,9 +55,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     final l10n = AppLocalizations.of(context)!;
-    final currentProfile = ref.read(
-      userProfileProvider,
-    ); // Grab current to preserve AutoSync!
+    final currentProfile = ref.read(userProfileProvider);
 
     final newProfile = UserProfile(
       hasOnboarded: true,
@@ -65,9 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       themeMode: currentProfile.themeMode,
       gender: _gender,
       goal: _goal,
-      preferredStyle: _preferredStyle.isEmpty
-          ? 'Full Gym'
-          : _preferredStyle, // Ensure fallback
+      preferredStyle: _preferredStyle.isEmpty ? 'Full Gym' : _preferredStyle,
       pushupCapacity: _pushups,
       pullupCapacity: _pullups,
       squatCapacity: _squats,
@@ -77,63 +73,97 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       isPro: false,
       customApiKey: '',
       customModelName: '',
-      isAutoSyncEnabled: currentProfile
-          .isAutoSyncEnabled, // <--- FIX: Preserve Drive Connection!
+      isAutoSyncEnabled: currentProfile.isAutoSyncEnabled,
     );
     await ref.read(userProfileProvider.notifier).saveProfile(newProfile);
 
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text(l10n.generatingPlan),
-              ],
+    bool aiSuccess = false;
+
+    while (!aiSuccess) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(l10n.generatingPlan),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    try {
-      final aiPrompt =
-          "Create a perfectly balanced 4-week baseline workout plan based on my profile.";
-      await ref
-          .read(aiPlanRepositoryProvider)
-          .generateAndSavePlan(aiPrompt, newProfile);
-      ref.invalidate(plansStreamProvider);
-      ref.invalidate(workoutsStreamProvider);
-      // --- FIX 1: FIRE BACKGROUND SYNC AFTER ONBOARDING ---
-      if (newProfile.isAutoSyncEnabled) {
-        final profileJsonString = jsonEncode(newProfile.toJson());
-        ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('AI Generation failed: $e'),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 5),
+      try {
+        final aiPrompt =
+            "Create a perfectly balanced 4-week baseline workout plan based on my profile.";
+        await ref
+            .read(aiPlanRepositoryProvider)
+            .generateAndSavePlan(aiPrompt, newProfile);
+
+        ref.invalidate(plansStreamProvider);
+        ref.invalidate(workoutsStreamProvider);
+
+        if (newProfile.isAutoSyncEnabled) {
+          final profileJsonString = jsonEncode(newProfile.toJson());
+          ref.read(driveSyncProvider).backupToCloud(profileJsonString).ignore();
+        }
+
+        aiSuccess = true; // Break the loop!
+
+        if (!mounted) return;
+        Navigator.pop(context); // Close loader
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          (route) => false,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context); // Close loader
+
+        final shouldRetry = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Connection Interrupted'),
+            content: Text(
+              'We had trouble reaching the AI servers.\n\nError: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(
+                  l10n.skipAi,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+              FilledButton.icon(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => Navigator.pop(ctx, true),
+                label: const Text('Try Again'),
+              ),
+            ],
           ),
         );
+
+        // If they chose to skip, drop them into the dashboard without a plan
+        if (shouldRetry != true) {
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            (route) => false,
+          );
+          break;
+        }
       }
     }
-
-    if (!mounted) return;
-    Navigator.pop(context);
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const DashboardScreen()),
-      (route) => false,
-    );
   }
 
   Future<void> _skipOnboarding() async {
@@ -577,32 +607,27 @@ class _PageTemplate extends StatelessWidget {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(24.0),
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 32),
-                  ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min, // Hug contents tightly
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              SliverFillRemaining(hasScrollBody: false, child: content),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              content,
             ],
           ),
         ),
@@ -742,7 +767,7 @@ class _SliderWithTextInputState extends State<_SliderWithTextInput> {
         ),
         const SizedBox(width: 8),
         SizedBox(
-          width: 80, // Enough room for the number and suffix
+          width: 110, // Enough room for the number and suffix
           child: TextField(
             controller: _controller,
             keyboardType: TextInputType.number,

@@ -100,7 +100,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your AI-powered fitness journey,\nsynced securely with Google Drive.';
 
   @override
-  String get restoreGoogle => 'Restore from Google Drive';
+  String get restoreGoogle => 'Restore Existing Backup';
 
   @override
   String get startFresh => 'Start Fresh';
@@ -743,4 +743,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Sign in with Google';
+
+  @override
+  String get backupOverwriteTitle => 'Overwrite Cloud Backup?';
+
+  @override
+  String get backupOverwriteContent =>
+      'This will replace your existing Google Drive backup with the workouts currently on this device. Cloud-only workouts will be lost.';
+
+  @override
+  String get backupNowBtn => 'Backup Now';
+
+  @override
+  String get restoreOverwriteTitle => 'Overwrite Local Data?';
+
+  @override
+  String get restoreOverwriteContent =>
+      'Restoring will wipe the workouts currently on this device and replace them with your Google Drive backup. Any un-synced local workouts will be lost.';
+
+  @override
+  String get restoreDataBtn => 'Restore Data';
 }

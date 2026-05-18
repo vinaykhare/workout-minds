@@ -117,20 +117,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final l10n = AppLocalizations.of(context)!;
     final dashboardState = ref.watch(dashboardControllerProvider);
 
-    // Listen for background errors and show a SnackBar!
-    ref.listen(dashboardControllerProvider, (previous, next) {
-      if (next is AsyncError) {
-        final errorText = next.error.toString().replaceAll('Exception: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorText),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    });
-
     // --- Listen for Pending File Imports ---
     ref.listen<Map<String, dynamic>?>(pendingImportProvider, (previous, next) {
       if (next != null) {
@@ -479,82 +465,87 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         builder: (context, setState) {
           return AlertDialog(
             title: Text(l10n.aiGeneratorTitle),
-            content: isGeneratingPlan
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(l10n.generatingPlan, textAlign: TextAlign.center),
-                    ],
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: promptController,
-                        decoration: InputDecoration(
-                          hintText: l10n.aiGeneratorHint,
-                          border: const OutlineInputBorder(),
+            content: SingleChildScrollView(
+              child: isGeneratingPlan
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(l10n.generatingPlan, textAlign: TextAlign.center),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: promptController,
+                          decoration: InputDecoration(
+                            hintText: l10n.aiGeneratorHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
                         ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                      // --- NEW: SMART CONTEXT FOOTER ---
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest.withAlpha(100),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.tune,
-                              size: 14,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '${l10n.aiUsingProfile} ${profile.preferredStyle} • ${profile.goal}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
+                        // --- NEW: SMART CONTEXT FOOTER ---
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withAlpha(100),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.tune,
+                                size: 14,
+                                color: Colors.grey,
                               ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(dialogContext); // Close dialog
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const SettingsScreen(),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '${l10n.aiUsingProfile} ${profile.preferredStyle} • ${profile.goal}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
                                   ),
-                                );
-                              },
-                              child: Text(
-                                l10n.aiEditProfile,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
-                            ),
-                          ],
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(dialogContext); // Close dialog
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SettingsScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  l10n.aiEditProfile,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      // ---------------------------------
-                    ],
-                  ),
+                        // ---------------------------------
+                      ],
+                    ),
+            ),
             actions: isGeneratingPlan
                 ? []
                 : [
@@ -566,16 +557,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {
+                      child: const Text('1 Workout'),
+                      onPressed: () async {
                         final prompt = promptController.text.trim();
-                        if (prompt.isNotEmpty) {
-                          ref
-                              .read(dashboardControllerProvider.notifier)
-                              .generateWorkout(prompt);
-                          Navigator.pop(context);
+                        if (prompt.isEmpty) return;
+
+                        bool aiSuccess = false;
+
+                        while (!aiSuccess) {
+                          setState(() => isGeneratingPlan = true);
+
+                          try {
+                            // Call the provider for a single workout
+                            await ref
+                                .read(dashboardControllerProvider.notifier)
+                                .generateWorkout(prompt);
+
+                            aiSuccess = true; // Break loop!
+
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext); // Close dialog
+                            }
+                          } catch (e) {
+                            if (dialogContext.mounted) {
+                              setState(
+                                () => isGeneratingPlan = false,
+                              ); // Hide spinner
+
+                              final shouldRetry = await showDialog<bool>(
+                                context: dialogContext,
+                                barrierDismissible: false,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Connection Interrupted'),
+                                  content: Text(
+                                    'Failed to reach AI servers.\n\n${e.toString().replaceAll('Exception: ', '')}',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: Text(
+                                        l10n.cancel,
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    FilledButton.icon(
+                                      icon: const Icon(Icons.refresh),
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      label: const Text('Try Again'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              // Break loop if they cancel
+                              if (shouldRetry != true) {
+                                break;
+                              }
+                            }
+                          }
                         }
                       },
-                      child: const Text('1 Workout'),
                     ),
                     FilledButton.icon(
                       icon: const Icon(Icons.calendar_month, size: 18),
@@ -584,45 +628,78 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         final prompt = promptController.text.trim();
                         if (prompt.isEmpty) return;
 
-                        setState(() => isGeneratingPlan = true);
+                        bool aiSuccess = false;
 
-                        try {
-                          // Call our Plan Repository
-                          final planId = await ref
-                              .read(aiPlanRepositoryProvider)
-                              .generateAndSavePlan(prompt, profile);
+                        while (!aiSuccess) {
+                          setState(() => isGeneratingPlan = true);
 
-                          // --- FIRE BACKGROUND SYNC AFTER PLAN GENERATION ---
-                          if (profile.isAutoSyncEnabled) {
-                            final profileJsonString = jsonEncode(
-                              profile.toJson(),
-                            );
-                            ref
-                                .read(driveSyncProvider)
-                                .backupToCloud(profileJsonString)
-                                .ignore();
-                          }
+                          try {
+                            final planId = await ref
+                                .read(aiPlanRepositoryProvider)
+                                .generateAndSavePlan(prompt, profile);
 
-                          if (dialogContext.mounted) {
-                            Navigator.pop(dialogContext); // Close dialog
-                            Navigator.push(
-                              dialogContext,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    PlanDetailsScreen(planId: planId),
-                              ),
-                            );
-                            ref.invalidate(dashboardControllerProvider);
-                          }
-                        } catch (e) {
-                          if (dialogContext.mounted) {
-                            setState(() => isGeneratingPlan = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed: $e'),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
+                            if (profile.isAutoSyncEnabled) {
+                              final profileJsonString = jsonEncode(
+                                profile.toJson(),
+                              );
+                              ref
+                                  .read(driveSyncProvider)
+                                  .backupToCloud(profileJsonString)
+                                  .ignore();
+                            }
+
+                            aiSuccess = true; // Break the loop!
+
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext); // Close dialog
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      PlanDetailsScreen(planId: planId),
+                                ),
+                              );
+                              ref.invalidate(dashboardControllerProvider);
+                            }
+                          } catch (e) {
+                            if (dialogContext.mounted) {
+                              setState(
+                                () => isGeneratingPlan = false,
+                              ); // Hide spinner
+
+                              final shouldRetry = await showDialog<bool>(
+                                context: dialogContext,
+                                barrierDismissible: false,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Connection Interrupted'),
+                                  content: Text(
+                                    'Failed to reach AI servers.\n\n${e.toString().replaceAll('Exception: ', '')}',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: Text(
+                                        l10n.cancel,
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    FilledButton.icon(
+                                      icon: const Icon(Icons.refresh),
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      label: const Text('Try Again'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              // Break loop if they cancel
+                              if (shouldRetry != true) {
+                                break;
+                              }
+                            }
                           }
                         }
                       },

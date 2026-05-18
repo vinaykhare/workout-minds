@@ -22,7 +22,7 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 
 // FIX 1: Pass the active database into the Sync Service!
 final driveSyncProvider = Provider<DriveSyncService>((ref) {
-  final db = ref.read(databaseProvider);
+  final db = ref.watch(databaseProvider);
   return DriveSyncService(db);
 });
 

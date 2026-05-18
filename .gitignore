@@ -49,4 +49,4 @@ app.*.map.json
 .env
 merge_code.dart
 combined_code.txt
-lib/firebase_options.dart
+workoutminds-keystore.jks
