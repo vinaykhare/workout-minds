@@ -11,27 +11,19 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
   cupertino_icons: ^1.0.8
-  # State Management (Riverpod)
   flutter_riverpod: ^2.6.0
   riverpod_annotation: ^2.6.0
-  # Local Persistence (Drift/SQLite)
   drift: ^2.20.0
   sqlite3: ^2.9.4
   sqlite3_flutter_libs: ^0.5.42
   path_provider: ^2.1.5
   path: ^1.9.1
-  # AI & Agentic Logic
-  google_generative_ai: ^0.4.0 # Vertex AI for Firebase integration
-  # Interactive Workout Engine (Audio & Background)
-  audio_service: ^0.18.17 # Background isolate persistence
-  flutter_tts: ^4.2.2 # Voice guidance
-  # Data Viz & Sharing
-  fl_chart: ^1.2.0 # Statistics dashboard
-  share_plus: ^12.0.2 # JSON workout export
+  google_generative_ai: ^0.4.0 
+  audio_service: ^0.18.17 
+  flutter_tts: ^4.2.2 
+  fl_chart: ^1.2.0 
+  share_plus: ^12.0.2 
   image_picker: ^1.2.1
-  firebase_core: ^3.6.0
-  firebase_auth: ^5.3.0
-  cloud_firestore: ^5.4.0
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.4
   flutter_dotenv: ^6.0.0
@@ -40,19 +32,18 @@ dependencies:
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   file_picker: ^10.3.10
   receive_sharing_intent: ^1.8.1
+  http: ^1.6.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  # Code Generation
   build_runner: ^2.4.13
   drift_dev: ^2.20.0
   riverpod_generator: ^2.6.0
   json_serializable: ^6.9.0
   flutter_launcher_icons: ^0.14.4
-
-  # Advanced Integration Testing
-  patrol: ^4.3.0 # Required for testing background notifications and audio
+  patrol: ^4.3.0 
 flutter:
   uses-material-design: true
   generate: true

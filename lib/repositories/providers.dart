@@ -10,8 +10,6 @@ import 'package:workout_minds/services/drive_sync_service.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
 import 'package:workout_minds/services/workout_share_service.dart';
 import 'ai_workout_repository.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // The Database Provider
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -20,26 +18,25 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-// FIX 1: Pass the active database into the Sync Service!
+// Drive Sync Service
 final driveSyncProvider = Provider<DriveSyncService>((ref) {
-  final db = ref.watch(databaseProvider);
-  return DriveSyncService(db);
+  // final db = ref.watch(databaseProvider);
+  return DriveSyncService(ref);
 });
 
 // ============================================================================
-// 1. THE SINGLE WORKOUT ARCHITECT
+// 1. THE SINGLE WORKOUT ARCHITECT (Serverless BYOK Setup)
 // ============================================================================
 final aiModelProvider = Provider<GenerativeModel>((ref) {
   final profile = ref.watch(userProfileProvider);
 
-  final defaultDevKey = dotenv.env['GEMINI_API_KEY'] ?? 'MISSING_KEY';
+  final defaultDevKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   final defaultModelName = dotenv.env['MODEL_NAME'] ?? 'gemini-2.5-flash-lite';
 
-  final activeApiKey = (profile.isPro && profile.customApiKey.isNotEmpty)
+  final activeApiKey = profile.customApiKey.isNotEmpty
       ? profile.customApiKey
       : defaultDevKey;
-
-  final activeModelName = (profile.isPro && profile.customModelName.isNotEmpty)
+  final activeModelName = profile.customModelName.isNotEmpty
       ? profile.customModelName
       : defaultModelName;
 
@@ -101,15 +98,14 @@ final aiModelProvider = Provider<GenerativeModel>((ref) {
 final aiPlanModelProvider = Provider<GenerativeModel>((ref) {
   final profile = ref.watch(userProfileProvider);
 
-  final defaultDevKey = dotenv.env['GEMINI_API_KEY'] ?? 'MISSING_KEY';
+  final defaultDevKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   // Note: For complex multi-layered JSON like this, 'gemini-2.5-flash' handles it best!
   final defaultModelName = dotenv.env['MODEL_NAME'] ?? 'gemini-2.5-flash';
 
-  final activeApiKey = (profile.isPro && profile.customApiKey.isNotEmpty)
+  final activeApiKey = profile.customApiKey.isNotEmpty
       ? profile.customApiKey
       : defaultDevKey;
-
-  final activeModelName = (profile.isPro && profile.customModelName.isNotEmpty)
+  final activeModelName = profile.customModelName.isNotEmpty
       ? profile.customModelName
       : defaultModelName;
 
@@ -332,27 +328,4 @@ final recentPlanLogsProvider = StreamProvider<List<PlanLogData>>((ref) {
   return ref.read(databaseProvider).watchRecentPlanLogs();
 });
 
-final firestoreCreditsProvider = StreamProvider.autoDispose<int>((ref) {
-  // FIX: Actively watch the auth state so this provider rebuilds upon login/logout!
-  final authState = ref.watch(authStateProvider);
-  final user = authState.value;
-
-  // If the user isn't logged into Firebase yet, default to 0
-  if (user == null) return Stream.value(0);
-
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .snapshots()
-      .map((snapshot) {
-        if (snapshot.exists && snapshot.data() != null) {
-          return snapshot.data()!['credits'] as int? ?? 0;
-        }
-        return 0; // Fallback if the document hasn't been created yet
-      });
-});
-
-// Exposes the real-time Firebase authentication state
-final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
+// REMOVED: firestoreCreditsProvider and authStateProvider infrastructure blocks entirely pruned.

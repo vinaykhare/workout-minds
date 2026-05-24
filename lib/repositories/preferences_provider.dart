@@ -85,7 +85,7 @@ class UserProfile {
       weightKg: weightKg ?? this.weightKg,
       aiCredits: aiCredits ?? this.aiCredits,
       isPro: isPro ?? this.isPro,
-      customApiKey: this.customApiKey,
+      customApiKey: customApiKey ?? this.customApiKey,
       customModelName: customModelName ?? this.customModelName,
       isAutoSyncEnabled: isAutoSyncEnabled ?? this.isAutoSyncEnabled,
     );

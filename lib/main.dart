@@ -4,7 +4,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +15,6 @@ import 'package:workout_minds/presentation/active_workout_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
 import 'package:workout_minds/services/workout_audio_handler.dart';
-import 'firebase_options.dart';
 
 // Global Database Provider
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -33,15 +31,6 @@ Future<void> main() async {
   await dotenv.load(fileName: ".env");
   // 1. Initialize SharedPreferences before the app starts
   final prefs = await SharedPreferences.getInstance();
-
-  // Initialize Firebase Core
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('Firebase init error: $e');
-  }
 
   // Initialize the Background Audio Service
   final audioHandler = await AudioService.init(

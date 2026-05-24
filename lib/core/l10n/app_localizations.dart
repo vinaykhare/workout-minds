@@ -461,7 +461,7 @@ abstract class AppLocalizations {
   /// No description provided for @generateAiPlan.
   ///
   /// In en, this message translates to:
-  /// **'Generate AI Plan (1 Credit)'**
+  /// **'Generate AI Plan'**
   String get generateAiPlan;
 
   /// No description provided for @skipAi.
@@ -636,7 +636,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to end your active workout \"{active}\" and start \"{target}\"?'**
-  String detailEndActiveContent(String active, String target);
+  String detailEndActiveContent(String active, Object target);
 
   /// No description provided for @detailEndAndStartBtn.
   ///
@@ -1118,23 +1118,11 @@ abstract class AppLocalizations {
   /// **'Fitness Journey'**
   String get fitnessJourney;
 
-  /// No description provided for @subscriptionAndAi.
+  /// No description provided for @aiConfigTitle.
   ///
   /// In en, this message translates to:
-  /// **'Subscription & AI'**
-  String get subscriptionAndAi;
-
-  /// No description provided for @aiCreditsRemaining.
-  ///
-  /// In en, this message translates to:
-  /// **'AI Credits Remaining'**
-  String get aiCreditsRemaining;
-
-  /// No description provided for @unlimitedByok.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlimited (BYOK)'**
-  String get unlimitedByok;
+  /// **'AI Configuration (BYOK)'**
+  String get aiConfigTitle;
 
   /// No description provided for @syncing.
   ///
@@ -1148,77 +1136,29 @@ abstract class AppLocalizations {
   /// **'Error loading'**
   String get errorLoading;
 
-  /// No description provided for @getAiCreditsTitle.
+  /// No description provided for @geminiAPICreds.
   ///
   /// In en, this message translates to:
-  /// **'Get 5 AI Credits'**
-  String get getAiCreditsTitle;
-
-  /// No description provided for @getAiCreditsSub.
-  ///
-  /// In en, this message translates to:
-  /// **'Rs. 100/- for a month'**
-  String get getAiCreditsSub;
-
-  /// No description provided for @buy.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy'**
-  String get buy;
-
-  /// No description provided for @paymentPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Payment gateway integration pending.'**
-  String get paymentPending;
-
-  /// No description provided for @powerUserTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Power User (BYOK)'**
-  String get powerUserTitle;
-
-  /// No description provided for @powerUserSub.
-  ///
-  /// In en, this message translates to:
-  /// **'Rs. 10/- for a month.\nRecommended for Power Users.'**
-  String get powerUserSub;
-
-  /// No description provided for @byokCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'BYOK Subscription Cancelled.'**
-  String get byokCancelled;
-
-  /// No description provided for @byokUnlocked.
-  ///
-  /// In en, this message translates to:
-  /// **'BYOK Mode Unlocked!'**
-  String get byokUnlocked;
-
-  /// No description provided for @subscribe.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribe'**
-  String get subscribe;
-
-  /// No description provided for @powerUserConfig.
-  ///
-  /// In en, this message translates to:
-  /// **'POWER USER CONFIG'**
-  String get powerUserConfig;
+  /// **'Gemini  API Credentials'**
+  String get geminiAPICreds;
 
   /// No description provided for @customGeminiKey.
   ///
   /// In en, this message translates to:
-  /// **'Custom Gemini API Key'**
+  /// **'Your Gemini API Key'**
   String get customGeminiKey;
 
   /// No description provided for @apiKeySaved.
   ///
   /// In en, this message translates to:
-  /// **'API Key Saved!'**
+  /// **'API Key Saved Successfully!'**
   String get apiKeySaved;
+
+  /// No description provided for @apiKeyDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'We do not store your key on our servers. It is kept safe locally on your device.'**
+  String get apiKeyDisclaimer;
 
   /// No description provided for @preferredAiModel.
   ///
@@ -1319,19 +1259,25 @@ abstract class AppLocalizations {
   /// No description provided for @account.
   ///
   /// In en, this message translates to:
-  /// **'Account'**
+  /// **'Google Drive Sync'**
   String get account;
 
   /// No description provided for @logOut.
   ///
   /// In en, this message translates to:
-  /// **'Log Out'**
+  /// **'Disconnect'**
   String get logOut;
+
+  /// No description provided for @loggedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected from Google Drive'**
+  String get loggedOut;
 
   /// No description provided for @signOutDesc.
   ///
   /// In en, this message translates to:
-  /// **'Sign out of Google and Firebase'**
+  /// **'Disconnect from Google Drive'**
   String get signOutDesc;
 
   /// No description provided for @dangerZone.
@@ -1433,19 +1379,25 @@ abstract class AppLocalizations {
   /// No description provided for @signIn.
   ///
   /// In en, this message translates to:
-  /// **'Sign In'**
+  /// **'Connect Google Drive'**
   String get signIn;
 
   /// No description provided for @signInDesc.
   ///
   /// In en, this message translates to:
-  /// **'Sign in with Google to unlock AI features and Cloud Backup.'**
+  /// **'Connect with Google to enable automatic backups and sync your workouts across devices via your personal Google Drive.'**
   String get signInDesc;
+
+  /// No description provided for @signInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed. Please try again.'**
+  String get signInFailed;
 
   /// No description provided for @signedInAs.
   ///
   /// In en, this message translates to:
-  /// **'Signed in as'**
+  /// **'Drive Connected'**
   String get signedInAs;
 
   /// No description provided for @signInWithGoogle.

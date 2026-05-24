@@ -1,117 +1,107 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-// FIX 2: Ensure Drift and the Database are imported!
 import 'package:drift/drift.dart';
 import 'package:workout_minds/data/local/database.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:workout_minds/repositories/providers.dart';
+
+class _AuthenticatedClient extends http.BaseClient {
+  _AuthenticatedClient(this._credentials, this._inner);
+
+  final GoogleSignInClientAuthorization _credentials;
+  final http.Client _inner;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    request.headers['Authorization'] = 'Bearer ${_credentials.accessToken}';
+    return _inner.send(request);
+  }
+}
 
 class DriveSyncService {
-  final AppDatabase _db;
-  DriveSyncService(this._db);
-  // 1. Paste your newly created WEB Client ID right here!
-  static final String _webClientId =
-      dotenv.env['WEB_CLIENT_ID'] ?? 'Missing Web Client ID';
+  final Ref _ref; // FIX: Hold the Ref, not the DB, to survive DB rebuilds
+  AppDatabase get _db => _ref.read(databaseProvider);
 
-  // 2. V7 uses the Singleton instance
+  static final String _webClientId = dotenv.env['WEB_CLIENT_ID'] ?? '';
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  GoogleSignInAccount? _currentUser;
+  bool _initialized = false;
+  drive.DriveApi?
+  _cachedDriveApi; // FIX: Prevent overlapping authorization prompts!
+
+  static const List<String> _driveScopes = [drive.DriveApi.driveAppdataScope];
   final String _backupDbName = 'workout_minds_backup.sqlite';
   final String _backupProfileName = 'workout_minds_profile.json';
 
-  // --- CORE AUTHENTICATION ---
+  DriveSyncService(this._ref);
+
+  Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+
+    try {
+      await _googleSignIn.initialize(
+        serverClientId: _webClientId.isNotEmpty ? _webClientId : null,
+      );
+
+      _googleSignIn.authenticationEvents.listen((event) {
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          _currentUser = event.user;
+        } else if (event is GoogleSignInAuthenticationEventSignOut) {
+          _currentUser = null;
+          _cachedDriveApi = null; // Clear cache on sign out
+        }
+      }, onError: (e) => debugPrint('Auth event error: $e'));
+
+      _googleSignIn.attemptLightweightAuthentication();
+    } catch (e) {
+      debugPrint('Init / silent sign-in failed: $e');
+    }
+  }
+
+  bool get isSignedIn => _currentUser != null;
+  String? get currentUserEmail => _currentUser?.email;
+
   Future<drive.DriveApi?> _getDriveApi() async {
     try {
-      // Initialize with the Web Client ID bridge
-      await _googleSignIn.initialize(serverClientId: _webClientId);
-
-      GoogleSignInAccount? account;
-
-      // Try lightweight auth first (replaces signInSilently)
-      try {
-        final result = _googleSignIn.attemptLightweightAuthentication();
-        account = result is Future ? await result : result;
-      } catch (e) {
-        debugPrint("Silent Sign In Notice: $e");
+      await init();
+      if (_cachedDriveApi != null) {
+        return _cachedDriveApi; // FIX: Use cached API
       }
 
-      // If that fails, show the bottom sheet (replaces signIn)
-      if (account == null) {
-        try {
-          account = await _googleSignIn.authenticate();
-        } catch (e) {
-          debugPrint("====== GOOGLE SIGN IN CRASH ======");
-          debugPrint(e.toString());
+      if (_currentUser == null) {
+        if (_googleSignIn.supportsAuthenticate()) {
+          await _googleSignIn.authenticate();
+        } else {
           return null;
         }
       }
 
-      // Request Drive scopes
-      final scopes = [drive.DriveApi.driveAppdataScope];
+      final user = _currentUser;
+      if (user == null) return null;
 
-      var authorization = await account.authorizationClient
-          .authorizationForScopes(scopes);
+      final authorization = await user.authorizationClient.authorizeScopes(
+        _driveScopes,
+      );
+      final authClient = _AuthenticatedClient(authorization, http.Client());
 
-      if (authorization == null) {
-        try {
-          authorization = await account.authorizationClient.authorizeScopes(
-            scopes,
-          );
-        } catch (e) {
-          debugPrint("====== SCOPE AUTH CRASH ======");
-          debugPrint(e.toString());
-          return null;
-        }
-      }
-
-      // V3 extension method: get the authClient using the scopes
-      final authClient = authorization.authClient(scopes: scopes);
-
-      // --- NEW: Sign into Firebase Auth using the Google Credentials ---
-      try {
-        final googleAuth = account.authentication;
-
-        // FIX: Reverted back to authorization.accessToken!
-        final credential = GoogleAuthProvider.credential(
-          accessToken: authorization.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        final userCredential = await FirebaseAuth.instance.signInWithCredential(
-          credential,
-        );
-
-        // --- Initialize Firestore Document for New Users ---
-        final user = userCredential.user;
-        if (user != null) {
-          final docRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid);
-          final docSnap = await docRef.get();
-          if (!docSnap.exists) {
-            // First time login! Grant 3 free credits.
-            await docRef.set({'credits': 3, 'isPro': false, 'proExpiry': null});
-          }
-        }
-      } catch (e) {
-        debugPrint("====== FIREBASE AUTH CRASH ======\n$e");
-      }
-
-      return drive.DriveApi(authClient);
+      _cachedDriveApi = drive.DriveApi(authClient); // Cache for session
+      return _cachedDriveApi;
     } catch (e) {
-      debugPrint("====== CRITICAL AUTH ERROR ======");
-      debugPrint(e.toString());
+      debugPrint('Critical auth error: $e');
       return null;
     }
   }
 
   // --- API HELPERS ---
+
   Future<String?> _getExistingBackupFileId(
     drive.DriveApi driveApi,
     String fileName,
@@ -127,7 +117,6 @@ class DriveSyncService {
     return null;
   }
 
-  // --- NEW HELPER: Upload any file ---
   Future<void> _uploadFile(
     drive.DriveApi driveApi,
     File localFile,
@@ -141,11 +130,9 @@ class DriveSyncService {
     final media = drive.Media(localFile.openRead(), localFile.lengthSync());
 
     if (existingId != null) {
-      // FIX: Do NOT send the parents field on an update request!
       final fileToUpdate = drive.File()..name = cloudName;
       await driveApi.files.update(fileToUpdate, existingId, uploadMedia: media);
     } else {
-      // CREATE: Must specify the hidden appDataFolder!
       final fileToCreate = drive.File()
         ..name = cloudName
         ..parents = ['appDataFolder'];
@@ -176,19 +163,17 @@ class DriveSyncService {
 
   // --- PUBLIC METHODS ---
 
-  /// CHECKS if a backup exists in the cloud without downloading it
   Future<bool> hasBackup() async {
     try {
       final driveApi = await _getDriveApi();
       if (driveApi == null) return false;
-
       final existingFileId = await _getExistingBackupFileId(
         driveApi,
         _backupDbName,
       );
       return existingFileId != null;
     } catch (e) {
-      debugPrint("Check Backup Error: $e");
+      debugPrint('Check Backup Error: $e');
       return false;
     }
   }
@@ -208,14 +193,12 @@ class DriveSyncService {
       final dbFolder = await getApplicationDocumentsDirectory();
       final localDbFile = File(p.join(dbFolder.path, 'workout_minds.sqlite'));
 
-      // --- SMART MERGE LOGIC ---
       onStatus?.call('Checking for existing cloud backups...');
       final cloudDbId = await _getExistingBackupFileId(driveApi, _backupDbName);
 
       if (cloudDbId != null) {
         onStatus?.call('Cloud backup found. Preparing merge...');
 
-        // 1. Export local workouts to memory
         final localWorkouts = await _db.select(_db.workouts).get();
         List<Map<String, dynamic>> localPayloads = [];
 
@@ -247,7 +230,6 @@ class DriveSyncService {
           });
         }
 
-        // --- FIX 3: Export local Plans to memory ---
         final localPlans = await _db.select(_db.workoutPlans).get();
         List<Map<String, dynamic>> localPlanPayloads = [];
 
@@ -260,7 +242,6 @@ class DriveSyncService {
           for (var day in days) {
             String? workoutTitle;
             if (day.workoutId != null) {
-              // We must save the TITLE, not the ID, because IDs will change when merged with the cloud!
               final w = await (_db.select(
                 _db.workouts,
               )..where((t) => t.id.equals(day.workoutId!))).getSingleOrNull();
@@ -281,23 +262,18 @@ class DriveSyncService {
           });
         }
 
-        // 2. Download Cloud DB (temporarily overwrites local file with cloud history)
         onStatus?.call('Downloading cloud history...');
         await _downloadFile(driveApi, _backupDbName, localDbFile);
 
-        // 3. Re-inject the new local workouts into the downloaded cloud DB
         onStatus?.call('Merging new local workouts...');
         await _db.transaction(() async {
           for (var payload in localPayloads) {
             final title = payload['workout']['title'];
-
-            // Check if this workout already exists in the cloud DB
             final exists = await (_db.select(
               _db.workouts,
             )..where((t) => t.title.equals(title))).getSingleOrNull();
 
             if (exists == null) {
-              // Insert the missing local workout into the DB
               final newWorkoutId = await _db
                   .into(_db.workouts)
                   .insert(
@@ -354,7 +330,7 @@ class DriveSyncService {
               }
             }
           }
-          // Now inject the plans
+
           for (var pData in localPlanPayloads) {
             final planTitle = pData['title'];
             final exists = await (_db.select(
@@ -376,7 +352,6 @@ class DriveSyncService {
               for (var day in pData['days']) {
                 int? mappedWorkoutId;
                 if (day['workoutTitle'] != null) {
-                  // Find the new Cloud ID for the workout using the Title
                   final w =
                       await (_db.select(_db.workouts)
                             ..where((t) => t.title.equals(day['workoutTitle'])))
@@ -400,13 +375,11 @@ class DriveSyncService {
         });
       }
 
-      // --- UPLOAD FINAL MERGED DB ---
       if (await localDbFile.exists()) {
         onStatus?.call('Uploading unified Database...');
         await _uploadFile(driveApi, localDbFile, _backupDbName);
       }
 
-      // 4. Upload Profile JSON
       onStatus?.call('Uploading Profile Data...');
       final tempDir = await getTemporaryDirectory();
       final localProfileFile = File(p.join(tempDir.path, 'temp_profile.json'));
@@ -418,15 +391,10 @@ class DriveSyncService {
     } catch (e) {
       debugPrint("Backup Error: $e");
       onStatus?.call('Error: Google API rejected the request.');
-      if (e.toString().contains('invalid_token') ||
-          e.toString().contains('Access was denied')) {
-        _googleSignIn.signOut().ignore();
-      }
       return false;
     }
   }
 
-  /// RESTORE: Pulls SQLite DB and returns the JSON string
   Future<String?> restoreFromCloud({Function(String)? onStatus}) async {
     try {
       onStatus?.call('Authenticating with Google...');
@@ -438,7 +406,6 @@ class DriveSyncService {
 
       final dbFolder = await getApplicationDocumentsDirectory();
 
-      // 1. Download Database
       onStatus?.call('Downloading Database...');
       final localDbFile = File(p.join(dbFolder.path, 'workout_minds.sqlite'));
       final dbExists = await _downloadFile(
@@ -451,7 +418,6 @@ class DriveSyncService {
         onStatus?.call('No database backup found.');
       }
 
-      // 2. Download Profile JSON
       onStatus?.call('Downloading Profile Data...');
       final tempDir = await getTemporaryDirectory();
       final localProfileFile = File(p.join(tempDir.path, 'temp_profile.json'));
@@ -469,17 +435,12 @@ class DriveSyncService {
       onStatus?.call('No profile backup found.');
       return null;
     } catch (e) {
-      debugPrint("Restore Error: $e");
+      debugPrint('Restore Error: $e');
       onStatus?.call('Error: Failed to fetch from Google.');
-      if (e.toString().contains('invalid_token') ||
-          e.toString().contains('Access was denied')) {
-        _googleSignIn.signOut().ignore();
-      }
       return null;
     }
   }
 
-  /// WIPE: Deletes all app data from the user's hidden Google Drive AppData folder
   Future<bool> deleteCloudBackup({Function(String)? onStatus}) async {
     try {
       onStatus?.call('Authenticating with Google...');
@@ -514,29 +475,27 @@ class DriveSyncService {
       );
       return true;
     } catch (e) {
-      debugPrint("Wipe Backup Error: $e");
+      debugPrint('Wipe Backup Error: $e');
       onStatus?.call('Error: Failed to delete cloud backups.');
       return false;
     }
   }
 
-  /// Manually triggers the Google Sign-In and Firebase Auth flow
   Future<bool> signIn({Function(String)? onStatus}) async {
     try {
       onStatus?.call('Signing in with Google...');
-      final driveApi = await _getDriveApi();
-      return driveApi != null;
+      // By calling _getDriveApi directly here, we trigger the sequence: Identity -> Authorization.
+      // Doing this sequentially in one function prevents the overlapping bottom sheets!
+      final api = await _getDriveApi();
+      return api != null;
     } catch (e) {
-      debugPrint("Manual Sign-In Error: $e");
+      debugPrint('Manual Sign-In Error: $e');
       onStatus?.call('Sign in failed.');
       return false;
     }
   }
 
   Future<void> signOut() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-    } catch (_) {}
     await _googleSignIn.signOut();
   }
 }

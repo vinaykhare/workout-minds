@@ -205,7 +205,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skip => 'Skip';
 
   @override
-  String get generateAiPlan => 'Generate AI Plan (1 Credit)';
+  String get generateAiPlan => 'Generate AI Plan';
 
   @override
   String get skipAi => 'Skip AI & Go to Dashboard';
@@ -297,7 +297,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String detailEndActiveContent(String active, String target) {
+  String detailEndActiveContent(String active, Object target) {
     return 'Are you sure you want to end your active workout \"$active\" and start \"$target\"?';
   }
 
@@ -570,13 +570,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fitnessJourney => 'Fitness Journey';
 
   @override
-  String get subscriptionAndAi => 'Subscription & AI';
-
-  @override
-  String get aiCreditsRemaining => 'AI Credits Remaining';
-
-  @override
-  String get unlimitedByok => 'Unlimited (BYOK)';
+  String get aiConfigTitle => 'AI Configuration (BYOK)';
 
   @override
   String get syncing => 'Syncing...';
@@ -585,41 +579,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorLoading => 'Error loading';
 
   @override
-  String get getAiCreditsTitle => 'Get 5 AI Credits';
+  String get geminiAPICreds => 'Gemini  API Credentials';
 
   @override
-  String get getAiCreditsSub => 'Rs. 100/- for a month';
+  String get customGeminiKey => 'Your Gemini API Key';
 
   @override
-  String get buy => 'Buy';
+  String get apiKeySaved => 'API Key Saved Successfully!';
 
   @override
-  String get paymentPending => 'Payment gateway integration pending.';
-
-  @override
-  String get powerUserTitle => 'Power User (BYOK)';
-
-  @override
-  String get powerUserSub =>
-      'Rs. 10/- for a month.\nRecommended for Power Users.';
-
-  @override
-  String get byokCancelled => 'BYOK Subscription Cancelled.';
-
-  @override
-  String get byokUnlocked => 'BYOK Mode Unlocked!';
-
-  @override
-  String get subscribe => 'Subscribe';
-
-  @override
-  String get powerUserConfig => 'POWER USER CONFIG';
-
-  @override
-  String get customGeminiKey => 'Custom Gemini API Key';
-
-  @override
-  String get apiKeySaved => 'API Key Saved!';
+  String get apiKeyDisclaimer =>
+      'We do not store your key on our servers. It is kept safe locally on your device.';
 
   @override
   String get preferredAiModel => 'Preferred AI Model';
@@ -672,13 +642,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToDeleteBackup => 'Failed to delete backup.';
 
   @override
-  String get account => 'Account';
+  String get account => 'Google Drive Sync';
 
   @override
-  String get logOut => 'Log Out';
+  String get logOut => 'Disconnect';
 
   @override
-  String get signOutDesc => 'Sign out of Google and Firebase';
+  String get loggedOut => 'Disconnected from Google Drive';
+
+  @override
+  String get signOutDesc => 'Disconnect from Google Drive';
 
   @override
   String get dangerZone => 'Danger Zone';
@@ -732,14 +705,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudBackupTitle => 'Cloud Backup';
 
   @override
-  String get signIn => 'Sign In';
+  String get signIn => 'Connect Google Drive';
 
   @override
   String get signInDesc =>
-      'Sign in with Google to unlock AI features and Cloud Backup.';
+      'Connect with Google to enable automatic backups and sync your workouts across devices via your personal Google Drive.';
 
   @override
-  String get signedInAs => 'Signed in as';
+  String get signInFailed => 'Connection failed. Please try again.';
+
+  @override
+  String get signedInAs => 'Drive Connected';
 
   @override
   String get signInWithGoogle => 'Sign in with Google';

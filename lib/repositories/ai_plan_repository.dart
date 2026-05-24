@@ -1,6 +1,5 @@
+// lib/repositories/ai_plan_repository.dart
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -13,52 +12,11 @@ class AIPlanRepository {
 
   AIPlanRepository(this._model, this._db);
 
-  // --- CLOUD AI CREDIT VERIFICATION ---
-  Future<DocumentReference?> _checkCredits(UserProfile profile) async {
-    if (profile.isPro) return null;
-    if (profile.customApiKey.isNotEmpty) return null; // BYOK is free!
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception(
-        'Authentication required! Run a Cloud Backup or Restore in Settings to link your Google account and unlock AI.',
-      );
-    }
-
-    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final snapshot = await docRef.get();
-    final credits = snapshot.exists
-        ? ((snapshot.data() as Map<String, dynamic>)['credits'] as int? ?? 0)
-        : 2;
-
-    if (credits <= 0) {
-      throw Exception('Out of free AI Credits! Please upgrade to Power User.');
-    }
-    return docRef;
-  }
-
-  Future<void> _deductCredit(DocumentReference? docRef) async {
-    if (docRef == null) return;
-    await FirebaseFirestore.instance.runTransaction((transaction) async {
-      final snapshot = await transaction.get(docRef);
-      if (!snapshot.exists) {
-        transaction.set(docRef, {'credits': 1}); // First gen used
-      } else {
-        transaction.update(docRef, {
-          'credits':
-              ((snapshot.data() as Map<String, dynamic>)['credits'] as int) - 1,
-        });
-      }
-    });
-  }
-
-  // FIX 1: Pass the UserProfile in so the AI knows their stats!
   Future<int> generateAndSavePlan(
     String userPrompt,
     UserProfile profile,
   ) async {
     try {
-      final docRef = await _checkCredits(profile);
-      // --- 1. THE SMART ADAPT LOOP (Fetch Historical Feedback) ---
       final recentLogs =
           await (_db.select(_db.workoutLogs)
                 ..orderBy([(t) => OrderingTerm.desc(t.executedAt)])
@@ -85,13 +43,10 @@ class AIPlanRepository {
             feedbackMap.forEach((exercise, note) {
               feedbackContext += "- $exercise: $note\n";
             });
-          } catch (_) {
-            // Ignore malformed JSON
-          }
+          } catch (_) {}
         }
       }
 
-      // --- 2. ASSEMBLE THE SUPER-PROMPT ---
       final prompt =
           '''
       You are an elite AI personal trainer. 
@@ -119,15 +74,10 @@ class AIPlanRepository {
         throw Exception("AI returned an empty response.");
       }
 
-      // Parse the strict JSON
       final Map<String, dynamic> data = jsonDecode(responseText);
-
-      // We will return the new Plan ID so the UI can navigate to it
       int newPlanId = -1;
 
-      // 3. Perform the massive database insertion safely inside a transaction!
       await _db.transaction(() async {
-        // A. Insert the Umbrella Plan
         newPlanId = await _db
             .into(_db.workoutPlans)
             .insert(
@@ -139,8 +89,6 @@ class AIPlanRepository {
               ),
             );
 
-        // B. Insert the Unique Workouts and cache their IDs
-        // We use a Map to remember which AI Workout Title matches which SQLite Workout ID
         Map<String, int> workoutIdMap = {};
 
         for (var workoutData in data['unique_workouts']) {
@@ -159,12 +107,10 @@ class AIPlanRepository {
 
           workoutIdMap[workoutTitle] = workoutId;
 
-          // C. Insert the Exercises for this specific workout
           int orderIndex = 0;
           for (var exData in workoutData['exercises']) {
             int exerciseId;
 
-            // Check if exercise already exists in global library
             final existingEx =
                 await (_db.select(_db.exercises)
                       ..where((t) => t.name.equals(exData['exercise_name']))
@@ -181,7 +127,6 @@ class AIPlanRepository {
                       name: exData['exercise_name'],
                       muscleGroup: exData['muscleGroup'] ?? 'Custom',
                       isCustom: const Value(false),
-                      // imageUrl: Value(exData['image_url']),
                       imageUrl: const Value(null),
                       equipment: Value(exData['equipment']),
                       instructions: Value(exData['instructions']),
@@ -189,7 +134,6 @@ class AIPlanRepository {
                   );
             }
 
-            // Link exercise to workout
             await _db
                 .into(_db.workoutExercises)
                 .insert(
@@ -213,7 +157,6 @@ class AIPlanRepository {
           }
         }
 
-        // D. The Magic: "Unroll" the 7-day schedule into a full multi-week calendar!
         final totalWeeks = data['total_weeks'] as int;
         final weeklySchedule = data['weekly_schedule'] as List<dynamic>;
 
@@ -222,8 +165,6 @@ class AIPlanRepository {
         for (int week = 0; week < totalWeeks; week++) {
           for (var dayData in weeklySchedule) {
             final targetWorkoutTitle = dayData['workout_title'];
-
-            // If the title is "REST" or it doesn't match our Map, we leave it null (Rest Day)
             final mappedWorkoutId = workoutIdMap[targetWorkoutTitle];
 
             await _db
@@ -232,16 +173,12 @@ class AIPlanRepository {
                   WorkoutPlanDaysCompanion.insert(
                     planId: newPlanId,
                     dayNumber: absoluteDayCounter++,
-                    workoutId: Value(
-                      mappedWorkoutId,
-                    ), // Will insert NULL if it's a rest day
+                    workoutId: Value(mappedWorkoutId),
                     notes: Value(dayData['notes']),
                   ),
                 );
           }
         }
-
-        await _deductCredit(docRef);
       });
 
       return newPlanId;
@@ -251,16 +188,10 @@ class AIPlanRepository {
     }
   }
 
-  // =====================================================================
-  // MID-PLAN OPTIMIZATION LOOP
-  // =====================================================================
   Future<void> optimizePlan(int planId, UserProfile profile) async {
     try {
-      final docRef = await _checkCredits(profile);
-      // 1. Fetch the current plan metadata
       final plan = await _db.getPlan(planId);
 
-      // 2. Fetch the recent execution feedback
       final recentLogs =
           await (_db.select(_db.workoutLogs)
                 ..where((t) => t.executionFeedback.isNotNull())
@@ -289,7 +220,6 @@ class AIPlanRepository {
         );
       }
 
-      // 3. Prompt Gemini to adapt the plan
       final prompt =
           '''
       You are an elite AI personal trainer. 
@@ -323,9 +253,7 @@ class AIPlanRepository {
 
       final Map<String, dynamic> data = jsonDecode(responseText);
 
-      // 4. Safely apply the changes to the database
       await _db.transaction(() async {
-        // Update the plan description to show it was optimized
         await (_db.update(
           _db.workoutPlans,
         )..where((t) => t.id.equals(planId))).write(
@@ -336,14 +264,12 @@ class AIPlanRepository {
           ),
         );
 
-        // Wipe the old calendar schedule
         await (_db.delete(
           _db.workoutPlanDays,
         )..where((t) => t.planId.equals(planId))).go();
 
         Map<String, int> workoutIdMap = {};
 
-        // Insert the newly adapted workouts
         for (var workoutData in data['unique_workouts']) {
           final workoutTitle = workoutData['workout_title'];
 
@@ -378,7 +304,6 @@ class AIPlanRepository {
                       name: exData['exercise_name'],
                       muscleGroup: exData['muscleGroup'] ?? 'Custom',
                       isCustom: const Value(false),
-                      // imageUrl: Value(exData['image_url']),
                       imageUrl: const Value(null),
                       equipment: Value(exData['equipment']),
                       instructions: Value(exData['instructions']),
@@ -409,7 +334,6 @@ class AIPlanRepository {
           }
         }
 
-        // Unroll the new schedule
         final weeklySchedule = data['weekly_schedule'] as List<dynamic>;
         int absoluteDayCounter = 1;
 
@@ -430,8 +354,6 @@ class AIPlanRepository {
                 );
           }
         }
-
-        await _deductCredit(docRef);
       });
     } catch (e) {
       debugPrint("Mid-Plan Optimization Error: $e");

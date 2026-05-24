@@ -6,7 +6,6 @@ import 'package:workout_minds/core/l10n/app_localizations.dart';
 import 'package:workout_minds/presentation/dashboard_screen.dart';
 import 'package:workout_minds/repositories/preferences_provider.dart';
 import 'package:workout_minds/repositories/providers.dart';
-import 'package:workout_minds/core/utils/ai_guard.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -27,10 +26,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _squats = 15;
   double _height = 170.0;
   double _weight = 70.0;
+  String _apiKey = '';
 
   void _nextPage() {
     FocusScope.of(context).unfocus();
-    if (_currentPage < 5) {
+    if (_currentPage < 6) {
       // <--- FIX 1: Bumped to 5 because we now have 6 pages!
       _pageController.animateToPage(
         _currentPage + 1,
@@ -71,7 +71,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       weightKg: _weight,
       aiCredits: 2,
       isPro: false,
-      customApiKey: '',
+      customApiKey: _apiKey,
       customModelName: '',
       isAutoSyncEnabled: currentProfile.isAutoSyncEnabled,
     );
@@ -227,7 +227,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 vertical: 16.0,
               ),
               child: LinearProgressIndicator(
-                value: (_currentPage + 1) / 6, // <--- FIX 1: Bumped total to 6
+                value: (_currentPage + 1) / 7, // <--- FIX 1: Bumped total to 6
                 borderRadius: BorderRadius.circular(8),
                 minHeight: 8,
               ),
@@ -242,9 +242,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _buildLanguagePage(l10n),
                   _buildGenderPage(l10n),
                   _buildGoalPage(l10n),
-                  _buildStylePage(l10n), // <--- NEW: The Missing Style Page!
+                  _buildStylePage(l10n),
                   _buildAssessmentPage(l10n),
                   _buildMetricsPage(l10n),
+                  _buildAiConfigPage(l10n),
                 ],
               ),
             ),
@@ -562,11 +563,91 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 48),
 
+          // FilledButton.icon(
+          //   onPressed: () async {
+          //     if (await AIGuard.check(context, ref)) {
+          //       _finishOnboarding();
+          //     }
+          //   },
+          //   icon: const Icon(Icons.auto_awesome, color: Colors.amberAccent),
+          //   style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
+          //   label: Text(
+          //     l10n.generateAiPlan,
+          //     style: const TextStyle(fontSize: 16),
+          //   ),
+          // ),
+          FilledButton(
+            onPressed: _nextPage,
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
+            child: const Text('Next', style: TextStyle(fontSize: 18)),
+          ),
+          // const SizedBox(height: 16),
+          // TextButton(
+          //   onPressed: _skipOnboarding,
+          //   child: Text(
+          //     l10n.skipAi,
+          //     style: const TextStyle(fontSize: 16, color: Colors.grey),
+          //   ),
+          // ),
+        ],
+      ),
+    );
+  }
+
+  // --- PAGE 7: AI CONFIGURATION (BYOK) ---
+  Widget _buildAiConfigPage(AppLocalizations l10n) {
+    return _PageTemplate(
+      title: l10n.aiConfigTitle,
+      subtitle:
+          'To generate your free AI workout plans, please provide your own Gemini API Key.',
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.deepPurpleAccent.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.deepPurpleAccent.withAlpha(50)),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How to get your free key:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '1. Go to Google AI Studio (aistudio.google.com)\n2. Tap "Get API key"\n3. Copy and paste it below.',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            onChanged: (val) => _apiKey = val,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: l10n.customGeminiKey,
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.key, color: Colors.deepPurpleAccent),
+            ),
+          ),
+          const SizedBox(height: 32),
           FilledButton.icon(
-            onPressed: () async {
-              if (await AIGuard.check(context, ref)) {
-                _finishOnboarding();
+            onPressed: () {
+              if (_apiKey.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Please enter an API Key, or skip this step.',
+                    ),
+                  ),
+                );
+                return;
               }
+              _finishOnboarding();
             },
             icon: const Icon(Icons.auto_awesome, color: Colors.amberAccent),
             style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),

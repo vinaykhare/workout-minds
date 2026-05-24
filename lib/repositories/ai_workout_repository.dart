@@ -1,6 +1,5 @@
+// lib/repositories/ai_workout_repository.dart
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:drift/drift.dart';
 import 'package:workout_minds/data/local/database.dart';
@@ -39,53 +38,13 @@ class AIWorkoutRepository {
     );
   }
 
-  // --- CLOUD AI CREDIT VERIFICATION ---
-  Future<DocumentReference?> _checkCredits(UserProfile profile) async {
-    if (profile.isPro) return null;
-    if (profile.customApiKey.isNotEmpty) return null; // BYOK is free!
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception(
-        'Authentication required! Run a Cloud Backup or Restore in Settings to link your Google account and unlock AI.',
-      );
-    }
-
-    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final snapshot = await docRef.get();
-    final credits = snapshot.exists
-        ? ((snapshot.data() as Map<String, dynamic>)['credits'] as int? ?? 0)
-        : 2;
-
-    if (credits <= 0) {
-      throw Exception('Out of free AI Credits! Please upgrade to Power User.');
-    }
-    return docRef;
-  }
-
-  Future<void> _deductCredit(DocumentReference? docRef) async {
-    if (docRef == null) return;
-    await FirebaseFirestore.instance.runTransaction((transaction) async {
-      final snapshot = await transaction.get(docRef);
-      if (!snapshot.exists) {
-        transaction.set(docRef, {'credits': 1}); // First gen used
-      } else {
-        transaction.update(docRef, {
-          'credits':
-              ((snapshot.data() as Map<String, dynamic>)['credits'] as int) - 1,
-        });
-      }
-    });
-  }
-
   Future<void> generateWithTools(
     String userPrompt,
     String appLocale,
     UserProfile profile,
   ) async {
-    final docRef = await _checkCredits(profile);
     final chat = _model.startChat();
 
-    // Inject the Hinglish directive conditionally
     final languageDirective = appLocale == 'hi'
         ? "CRITICAL: Write the Workout title in conversational Roman Hinglish (e.g., 'Aaj Chest Phodenge')."
         : "CRITICAL: Write the Workout title in Standard English.";
@@ -136,7 +95,6 @@ class AIWorkoutRepository {
 
     var response = await chat.sendMessage(Content.text(enrichedPrompt));
 
-    // 2. Tool Reasoning & Execution Loop
     final functionCalls = response.functionCalls.toList();
 
     if (functionCalls.isNotEmpty) {
@@ -154,20 +112,16 @@ class AIWorkoutRepository {
       );
     }
 
-    // 4. Final Structured Output
     if (response.text != null) {
       try {
-        // Strip out any markdown formatting the AI might have accidentally added
         String cleanJson = response.text!;
         cleanJson = cleanJson
             .replaceAll('```json', '')
             .replaceAll('```', '')
             .trim();
 
-        // FIX: Decode as a Map, not a List!
-        final Map<String, dynamic> decodedMap = jsonDecode(response.text!);
+        final Map<String, dynamic> decodedMap = jsonDecode(cleanJson);
 
-        // 2. Extract the generated title and the exercises list
         final String aiTitle = decodedMap['workout_title'] as String;
         final List<dynamic> exercisesList =
             decodedMap['exercises'] as List<dynamic>;
@@ -190,46 +144,38 @@ class AIWorkoutRepository {
               .into(_db.workouts)
               .insert(
                 WorkoutsCompanion.insert(
-                  title: aiTitle, // FIX: Use the Gemini generated title here!
+                  title: aiTitle,
                   difficultyLevel: calculatedDifficulty,
                   aiGenerated: const Value(true),
                 ),
               );
 
-          // 3. Loop through the exercisesList instead of decoded
           for (var i = 0; i < exercisesList.length; i++) {
             final item = exercisesList[i];
 
-            // Parse optional image URL safely
             String? parsedImageUrl = item['image_url'] as String?;
             if (parsedImageUrl != null && parsedImageUrl.trim().isEmpty) {
               parsedImageUrl = null;
             }
 
-            // FIX 1: Extract the string safely from the JSON Map!
             final String exerciseName = item['exercise_name'] as String;
 
             int exId;
 
-            // 1. Does it already exist in our global dictionary?
             final existingExercise =
                 await (_db.select(_db.exercises)
-                      ..where(
-                        (t) => t.name.equals(exerciseName),
-                      ) // <-- Use the safely extracted string
+                      ..where((t) => t.name.equals(exerciseName))
                       ..limit(1))
                     .getSingleOrNull();
 
             if (existingExercise != null) {
-              // AWESOME! Use the existing one so they keep their custom images!
               exId = existingExercise.id;
             } else {
-              // FIX 2: Use standard insert (insertOnConflictUpdate can act weird without UNIQUE constraints)
               exId = await _db
                   .into(_db.exercises)
                   .insert(
                     ExercisesCompanion.insert(
-                      name: exerciseName, // <-- Use the safely extracted string
+                      name: exerciseName,
                       muscleGroup: item['muscle_group'] as String,
                       isCustom: const Value(false),
                       imageUrl: Value(null),
@@ -258,8 +204,6 @@ class AIWorkoutRepository {
                   ),
                 );
           }
-
-          await _deductCredit(docRef);
         });
       } catch (e) {
         throw Exception(
@@ -274,8 +218,6 @@ class AIWorkoutRepository {
   // =====================================================================
   Future<void> optimizeWorkout(int workoutId, UserProfile profile) async {
     try {
-      final docRef = await _checkCredits(profile);
-      // 1. Fetch current workout & its exercises to give Gemini context
       final workout = await (_db.select(
         _db.workouts,
       )..where((t) => t.id.equals(workoutId))).getSingle();
@@ -290,7 +232,6 @@ class AIWorkoutRepository {
             "- ${ex.name} (${details.targetSets} sets x ${details.targetReps ?? details.targetDurationSeconds ?? '?'})\n";
       }
 
-      // 2. Fetch the recent execution feedback
       final recentLogs =
           await (_db.select(_db.workoutLogs)
                 ..where((t) => t.executionFeedback.isNotNull())
@@ -319,7 +260,6 @@ class AIWorkoutRepository {
         );
       }
 
-      // 3. Prompt Gemini to adapt this specific workout
       final prompt =
           '''
       You are an elite AI personal trainer. 
@@ -356,16 +296,13 @@ class AIWorkoutRepository {
         throw Exception("AI returned an empty response.");
       }
 
-      // Strip markdown just in case
       String cleanJson = responseText
           .replaceAll('```json', '')
           .replaceAll('```', '')
           .trim();
       final Map<String, dynamic> data = jsonDecode(cleanJson);
 
-      // 4. Safely apply the changes to the database
       await _db.transaction(() async {
-        // Update the workout title
         await (_db.update(
           _db.workouts,
         )..where((t) => t.id.equals(workoutId))).write(
@@ -374,7 +311,6 @@ class AIWorkoutRepository {
           ),
         );
 
-        // Wipe the old exercises for this workout
         await (_db.delete(
           _db.workoutExercises,
         )..where((t) => t.workoutId.equals(workoutId))).go();
@@ -401,7 +337,6 @@ class AIWorkoutRepository {
                     name: exerciseName,
                     muscleGroup: item['muscle_group'] ?? 'Custom',
                     isCustom: const Value(false),
-                    // imageUrl: Value(item['image_url'] as String?),
                     imageUrl: const Value(null),
                     equipment: Value(item['equipment'] as String?),
                     instructions: Value(item['instructions']),
@@ -430,8 +365,6 @@ class AIWorkoutRepository {
                 ),
               );
         }
-
-        await _deductCredit(docRef);
       });
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
